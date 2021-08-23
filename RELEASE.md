@@ -42,6 +42,7 @@
     simpler syntax and less constraints. You have to pass the file path to the
     schema file instead of the parent directory unlike `Importer`.
 *   Updated GCP Vertex Client to support EncryptionSpec and Cloud Labels.
+*   TFX has experimental support for TensorFlow Decision Forests models.
 
 ## Breaking Changes
 
