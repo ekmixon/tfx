@@ -148,30 +148,31 @@ class Pipeline:
   @components.setter
   def components(self, components: List[base_node.BaseNode]):
     deduped_components = set(components)
-    producer_map = {}
-    node_ids = set()
+    node_by_id = {}
 
     # Fills in producer map.
     for component in deduped_components:
       # Checks every node has an unique id.
-      if component.id in node_ids:
-        raise RuntimeError('Duplicated node_id %s for component type %s' %
-                           (component.id, component.type))
-      node_ids.add(component.id)
+      if component.id in node_by_id:
+        raise RuntimeError(
+            f'Duplicated node_id {component.id} for component type'
+            f'{component.type}.')
+      node_by_id[component.id] = component
       for key, output_channel in component.outputs.items():
-        assert not producer_map.get(
-            output_channel), '{} produced more than once'.format(output_channel)
-        producer_map[output_channel] = component
+        assert output_channel.producer_component_id is None, (
+            f'{output_channel} is produced more than once')
         output_channel.producer_component_id = component.id
         output_channel.output_key = key
 
     # Connects nodes based on producer map.
     for component in deduped_components:
-      for value in component.inputs.values():
-        for i in channel_utils.get_individual_channels(value):
-          if producer_map.get(i):
-            component.add_upstream_node(producer_map[i])
-            producer_map[i].add_downstream_node(component)
+      for input_channel in component.inputs.values():
+        for producer_id in (
+            channel_utils.get_channel_producer_component_ids(input_channel)):
+          upstream_node = node_by_id.get(producer_id)
+          if upstream_node:
+            component.add_upstream_node(upstream_node)
+            upstream_node.add_downstream_node(component)
 
     layers = topsort.topsorted_layers(
         list(deduped_components),
