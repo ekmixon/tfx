@@ -17,11 +17,11 @@ import json
 import textwrap
 from unittest import mock
 
-
 import absl
 import tensorflow as tf
 from tfx.types import artifact
 from tfx.types import value_artifact
+from tfx.types.system_artifacts import Dataset
 from tfx.utils import json_utils
 
 from google.protobuf import json_format
@@ -78,6 +78,33 @@ json_format.Parse(
         }
     }), _mlmd_artifact_type)
 _MyArtifact3 = artifact._ArtifactType(mlmd_artifact_type=_mlmd_artifact_type)  # pylint: disable=invalid-name
+
+_mlmd_artifact_type_with_base_type = metadata_store_pb2.ArtifactType()
+json_format.Parse(
+    json.dumps({
+        'name': 'MyTypeName4',
+        'properties': {
+            'int1': 'INT',
+            'int2': 'INT',
+            'float1': 'DOUBLE',
+            'float2': 'DOUBLE',
+            'string1': 'STRING',
+            'string2': 'STRING'
+        },
+        'base_type': metadata_store_pb2.ArtifactType.DATASET
+    }), _mlmd_artifact_type_with_base_type)
+_MyArtifact4 = artifact._ArtifactType(
+    mlmd_artifact_type=_mlmd_artifact_type_with_base_type)  # pylint: disable=invalid-name
+
+
+class _MyExamplesArtifact(artifact.Artifact):
+  TYPE_NAME = 'MyExamplesTypeName'
+  TYPE_ANNOTATION = Dataset
+  PROPERTIES = {
+      'span': artifact.Property(type=artifact.PropertyType.INT),
+      'version': artifact.Property(type=artifact.PropertyType.INT),
+      'split_names': artifact.Property(type=artifact.PropertyType.STRING),
+  }
 
 
 class _MyValueArtifact(value_artifact.ValueArtifact):
@@ -902,6 +929,26 @@ class ArtifactTest(tf.test.TestCase):
     artifact2 = _MyArtifact2()
     with self.assertRaises(AssertionError):
       artifact2.copy_from(artifact1)
+
+  def testTypeAnnotationIsDataset(self):
+    examples_artifact = _MyExamplesArtifact()
+    self.assertEqual(examples_artifact.artifact_type.base_type,
+                     metadata_store_pb2.ArtifactType.DATASET)
+
+  def testTypeAnnotationIsNone(self):
+    my_artifact = _MyArtifact()
+    self.assertEqual(my_artifact.artifact_type.base_type,
+                     metadata_store_pb2.ArtifactType.UNSET)
+
+  def testArtifactTypeWithTypeAnnotation(self):
+    my_artifact_without_annotation = _MyArtifact3()
+    self.assertIsNone(my_artifact_without_annotation.TYPE_ANNOTATION)
+    self.assertEqual(my_artifact_without_annotation.artifact_type.base_type,
+                     metadata_store_pb2.ArtifactType.UNSET)
+
+    my_artifact_with_annotation = _MyArtifact4()
+    self.assertEqual(my_artifact_with_annotation.artifact_type.base_type,
+                     metadata_store_pb2.ArtifactType.DATASET)
 
 
 if __name__ == '__main__':
