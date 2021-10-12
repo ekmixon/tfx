@@ -34,8 +34,10 @@ from tfx.orchestration.experimental.core import task as task_lib
 from tfx.orchestration.experimental.core import task_gen_utils
 from tfx.orchestration.experimental.core import task_queue as tq
 from tfx.orchestration.experimental.core.task_schedulers import manual_task_scheduler
+from tfx.orchestration.portable import partial_run_utils
 from tfx.orchestration.portable.mlmd import execution_lib
 from tfx.proto.orchestration import pipeline_pb2
+from tfx.proto.orchestration import run_state_pb2
 from tfx.utils import status as status_lib
 
 from ml_metadata.proto import metadata_store_pb2
@@ -364,6 +366,119 @@ def _wait_for_node_inactivation(pipeline_state: pstate.PipelineState,
                                   pstate.NodeState.STOPPED)
 
   return _wait_for_predicate(_is_inactivated, 'node inactivation', timeout_secs)
+
+
+@_to_status_not_ok_error
+@_pipeline_ops_lock
+def resume_pipeline(mlmd_handle: metadata.Metadata,
+                    pipeline: pipeline_pb2.Pipeline) -> pstate.PipelineState:
+  """Resumes a pipeline run from previously failed nodes.
+
+  Upon success, MLMD is updated to signal that the pipeline must be started.
+
+  Args:
+    mlmd_handle: A handle to the MLMD db.
+    pipeline: IR of the pipeline to resume.
+
+  Returns:
+    The `PipelineState` object upon success.
+
+  Raises:
+    status_lib.StatusNotOkError: Failure to resume pipeline. With code
+      `ALREADY_EXISTS` if a pipeline is already running. With code
+      `status_lib.Code.FAILED_PRECONDITION` if a previous pipeline run
+      is not found for resuming.
+  """
+
+  logging.info('Received request to resume pipeline; pipeline uid: %s',
+               task_lib.PipelineUid.from_pipeline(pipeline))
+  latest_pipeline_view = None
+  pipeline_uid = task_lib.PipelineUid.from_pipeline(pipeline)
+  views = pstate.PipelineView.load_all(mlmd_handle, pipeline_uid)
+  for view in views:
+    execution = view.execution
+    if execution_lib.is_execution_active(execution):
+      raise status_lib.StatusNotOkError(
+          code=status_lib.Code.ALREADY_EXISTS,
+          message=f'Can not start pipeline. An active pipeline is already running with uid {pipeline_uid}.'
+      )
+    if (not latest_pipeline_view or execution.create_time_since_epoch >
+        latest_pipeline_view.execution.create_time_since_epoch):
+      latest_pipeline_view = view
+
+  # Get failed nodes in latest pipeline run.
+  if not latest_pipeline_view:
+    raise status_lib.StatusNotOkError(
+        code=status_lib.Code.NOT_FOUND,
+        message='Pipeline failed to resume. No previous pipeline run found.')
+
+  nodes_run_states = latest_pipeline_view.get_node_run_states()
+  succeeded_nodes = []
+  for node, run_state in nodes_run_states.items():
+    if run_state.state == run_state_pb2.RunState.COMPLETE:
+      succeeded_nodes.append(node)
+
+  def node_fn(nodes):
+    return lambda node: node in nodes
+
+  from_nodes = nodes_run_states.keys()
+  to_nodes = nodes_run_states.keys()
+  # Mark nodes using partial pipeline run lib.
+  pipeline = partial_run_utils.mark_pipeline(pipeline, node_fn(from_nodes),
+                                             node_fn(to_nodes),
+                                             node_fn(succeeded_nodes))
+  if pipeline.runtime_spec.HasField('snapshot_settings'):
+    partial_run_utils.snapshot(mlmd_handle, pipeline)
+
+  return initiate_pipeline_start(mlmd_handle, pipeline)
+
+
+_default_snapshot_settings = pipeline_pb2.SnapshotSettings()
+_default_snapshot_settings.latest_pipeline_run_strategy.SetInParent()
+
+
+@_to_status_not_ok_error
+@_pipeline_ops_lock
+def rerun_pipeline(
+    mlmd_handle: metadata.Metadata,
+    pipeline: pipeline_pb2.Pipeline,
+    from_nodes: List[str],
+    to_nodes: List[str],
+    snapshot_settings: Optional[
+        pipeline_pb2.SnapshotSettings] = _default_snapshot_settings
+) -> pstate.PipelineState:
+  """Performs a partial rerun of the pipeline.
+
+  Upon success, MLMD is updated to signal that the pipeline must be started.
+
+  Args:
+    mlmd_handle: A handle to the MLMD db.
+    pipeline: IR of the pipeline to resume.
+    from_nodes: The set of node ids where the partial run should start from.
+    to_nodes: The set of node ids where the partial run should end.
+    snapshot_settings: Settings needed to perform the snapshot step for reusing
+      node artifacts. Defaults to using artifacts from latest pipeline run.
+
+  Returns:
+    The `PipelineState` object upon success.
+  """
+  logging.info('Received request to rerun pipeline; pipeline uid: %s',
+               task_lib.PipelineUid.from_pipeline(pipeline))
+
+  def node_fn(nodes):
+    return lambda node: node in nodes
+
+  # Mark nodes using partial pipeline run lib.
+  pipeline = partial_run_utils.mark_pipeline(
+      pipeline,
+      node_fn(from_nodes),
+      node_fn(to_nodes),
+      snapshot_settings=snapshot_settings)
+
+  if pipeline.runtime_spec.HasField('snapshot_settings'):
+    partial_run_utils.snapshot(mlmd_handle, pipeline)
+
+  return initiate_pipeline_start(mlmd_handle, pipeline)
 
 
 _POLLING_INTERVAL_SECS = 10.0

@@ -96,16 +96,17 @@ class PipelineNodeAsDoFn(beam.DoFn):
   def _run_node(self) -> None:
     platform_config = self._extract_platform_config(self._deployment_config,
                                                     self._node_id)
-    if self._pipeline_node.execution_options.run.perform_snapshot:
-      partial_run_utils.snapshot(self._mlmd_connection_config, self._pipeline)
-    launcher.Launcher(
-        pipeline_node=self._pipeline_node,
-        mlmd_connection=metadata.Metadata(self._mlmd_connection_config),
-        pipeline_info=self._pipeline_info,
-        pipeline_runtime_spec=self._pipeline_runtime_spec,
-        executor_spec=self._executor_spec,
-        platform_config=platform_config,
-        custom_driver_spec=self._custom_driver_spec).launch()
+    with metadata.Metadata(self._mlmd_connection_config) as mlmd_handle:
+      if self._pipeline_node.execution_options.run.perform_snapshot:
+        partial_run_utils.snapshot(mlmd_handle, self._pipeline)
+      launcher.Launcher(
+          pipeline_node=self._pipeline_node,
+          mlmd_connection=mlmd_handle,
+          pipeline_info=self._pipeline_info,
+          pipeline_runtime_spec=self._pipeline_runtime_spec,
+          executor_spec=self._executor_spec,
+          platform_config=platform_config,
+          custom_driver_spec=self._custom_driver_spec).launch()
 
   def _extract_platform_config(
       self,

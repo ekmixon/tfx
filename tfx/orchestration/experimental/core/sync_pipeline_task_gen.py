@@ -13,7 +13,7 @@
 # limitations under the License.
 """TaskGenerator implementation for sync pipelines."""
 
-from typing import Callable, Hashable, List, Optional, Sequence, Set
+from typing import Callable, Hashable, List, Optional, Set
 
 from absl import logging
 import cachetools
@@ -34,7 +34,6 @@ from tfx.utils import status as status_lib
 from tfx.utils import topsort
 
 from google.protobuf import any_pb2
-from ml_metadata.proto import metadata_store_pb2
 
 # Caches successful and skipped nodes so we don't have to query MLMD repeatedly.
 _successful_nodes_cache = cachetools.LRUCache(maxsize=1024)
@@ -141,6 +140,15 @@ class SyncPipelineTaskGenerator(task_gen.TaskGenerator):
     node_id = node.node_info.id
     result = []
 
+    if node.execution_options.HasField('skip'):
+      logging.info('Node %s is skipped in this partial run.', node.node_info.id)
+      successful_node_ids.add(node.node_info.id)
+      pstate.record_state_change_time()
+      result.append(
+          task_lib.UpdateNodeStateTask(
+              node_uid=node_uid, state=pstate.NodeState.COMPLETE))
+      return result
+
     if self._in_successful_nodes_cache(node_uid):
       successful_node_ids.add(node_id)
       return result
@@ -244,12 +252,11 @@ class SyncPipelineTaskGenerator(task_gen.TaskGenerator):
     # Finally, we are ready to generate tasks for the node by resolving inputs.
     result.extend(
         self._resolve_inputs_and_generate_tasks_for_node(
-            node, node_executions, successful_node_ids))
+            node, successful_node_ids))
     return result
 
   def _resolve_inputs_and_generate_tasks_for_node(
       self, node: pipeline_pb2.PipelineNode,
-      node_executions: Sequence[metadata_store_pb2.Execution],
       successful_node_ids: Set[str]) -> List[task_lib.Task]:
     """Generates tasks for a node by freshly resolving inputs."""
     result = []
