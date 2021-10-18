@@ -64,24 +64,24 @@ class QueryBasedExampleGen(base_beam_component.BaseBeamComponent):
                                     data_types.RuntimeParameter]] = None,
       output_data_format: Optional[int] = example_gen_pb2.FORMAT_TF_EXAMPLE,
       output_file_format: Optional[int] = example_gen_pb2.FORMAT_TFRECORDS_GZIP,
-      ):
+  ):
     """Construct a QueryBasedExampleGen component.
 
     Args:
       input_config: An
         [example_gen_pb2.Input](https://github.com/tensorflow/tfx/blob/master/tfx/proto/example_gen.proto)
-        instance, providing input configuration. _required_
+          instance, providing input configuration. _required_
       output_config: An
         [example_gen_pb2.Output](https://github.com/tensorflow/tfx/blob/master/tfx/proto/example_gen.proto)
-        instance, providing output configuration. If unset, the default splits
+          instance, providing output configuration. If unset, the default splits
         will be labeled as 'train' and 'eval' with a distribution ratio of 2:1.
       custom_config: An
         [example_gen_pb2.CustomConfig](https://github.com/tensorflow/tfx/blob/master/tfx/proto/example_gen.proto)
-        instance, providing custom configuration for ExampleGen.
+          instance, providing custom configuration for ExampleGen.
       output_data_format: Payload format of generated data in output artifact,
         one of example_gen_pb2.PayloadFormat enum.
-      output_file_format: File format of generated data in output artifact,
-          one of example_gen_pb2.FileFormat enum.
+      output_file_format: File format of generated data in output artifact, one
+        of example_gen_pb2.FileFormat enum.
 
     Raises:
       ValueError: The output_data_format, output_file_format value
@@ -169,8 +169,8 @@ class FileBasedExampleGen(base_beam_component.BaseBeamComponent):
         default to searching for latest span with no restrictions.
       output_data_format: Payload format of generated data in output artifact,
         one of example_gen_pb2.PayloadFormat enum.
-      output_file_format: File format of generated data in output artifact,
-        one of example_gen_pb2.FileFormat enum.
+      output_file_format: File format of generated data in output artifact, one
+        of example_gen_pb2.FileFormat enum.
       custom_executor_spec: Optional custom executor spec overriding the default
         executor spec specified in the component attribute.
     """

@@ -87,13 +87,13 @@ class Transform(base_beam_component.BaseBeamComponent):
 
   def __init__(
       self,
-      examples: types.Channel,
-      schema: types.Channel,
+      examples: types.BaseChannel,
+      schema: types.BaseChannel,
       module_file: Optional[Union[str, data_types.RuntimeParameter]] = None,
       preprocessing_fn: Optional[Union[str,
                                        data_types.RuntimeParameter]] = None,
       splits_config: Optional[transform_pb2.SplitsConfig] = None,
-      analyzer_cache: Optional[types.Channel] = None,
+      analyzer_cache: Optional[types.BaseChannel] = None,
       materialize: bool = True,
       disable_analyzer_cache: bool = False,
       force_tf_compat_v1: bool = False,
@@ -103,43 +103,32 @@ class Transform(base_beam_component.BaseBeamComponent):
     """Construct a Transform component.
 
     Args:
-      examples: A Channel of type `standard_artifacts.Examples` (required).
-        This should contain custom splits specified in splits_config. If
-        custom split is not provided, this should contain two splits 'train'
-        and 'eval'.
-      schema: A Channel of type `standard_artifacts.Schema`. This should
+      examples: A BaseChannel of type `standard_artifacts.Examples` (required).
+        This should contain custom splits specified in splits_config. If custom
+        split is not provided, this should contain two splits 'train' and
+        'eval'.
+      schema: A BaseChannel of type `standard_artifacts.Schema`. This should
         contain a single schema artifact.
       module_file: The file path to a python module file, from which the
-        'preprocessing_fn' function will be loaded.
-        Exactly one of 'module_file' or 'preprocessing_fn' must be supplied.
-
-        The function needs to have the following signature:
-        ```
-        def preprocessing_fn(inputs: Dict[Text, Any]) -> Dict[Text, Any]:
-          ...
-        ```
-        where the values of input and returned Dict are either tf.Tensor or
-        tf.SparseTensor.
-
-        If additional inputs are needed for preprocessing_fn, they can be passed
-        in custom_config:
-
-        ```
+        'preprocessing_fn' function will be loaded. Exactly one of 'module_file'
+        or 'preprocessing_fn' must be supplied.
+        The function needs to have the following signature: ```
+        def preprocessing_fn(inputs: Dict[Text, Any]) -> Dict[Text, Any]: ...
+          ``` where the values of input and returned Dict are either tf.Tensor
+          or tf.SparseTensor.  If additional inputs are needed for
+          preprocessing_fn, they can be passed
+        in custom_config:  ```
         def preprocessing_fn(inputs: Dict[Text, Any], custom_config:
-                             Dict[Text, Any]) -> Dict[Text, Any]:
-          ...
-        ```
-        To update the stats options used to compute the pre-transform or
-        post-transform statistics, optionally define the
-        'stats-options_updater_fn' within the same module. If implemented,
-        this function needs to have the following signature:
-        ```
+                             Dict[Text, Any]) -> Dict[Text, Any]: ... ``` To
+                               update the stats options used to compute the
+                               pre-transform or post-transform statistics,
+                               optionally define the 'stats-options_updater_fn'
+                               within the same module. If implemented,
+        this function needs to have the following signature: ```
         def stats_options_updater_fn(stats_type: tfx.components.transform
           .stats_options_util.StatsType, stats_options: tfdv.StatsOptions)
-          -> tfdv.StatsOptions:
-          ...
-        ```
-        Use of a RuntimeParameter for this argument is experimental.
+          -> tfdv.StatsOptions: ... ``` Use of a RuntimeParameter for this
+            argument is experimental.
       preprocessing_fn: The path to python function that implements a
         'preprocessing_fn'. See 'module_file' for expected signature of the
         function. Exactly one of 'module_file' or 'preprocessing_fn' must be
@@ -147,11 +136,11 @@ class Transform(base_beam_component.BaseBeamComponent):
       splits_config: A transform_pb2.SplitsConfig instance, providing splits
         that should be analyzed and splits that should be transformed. Note
         analyze and transform splits can have overlap. Default behavior (when
-        splits_config is not set) is analyze the 'train' split and transform
-        all splits. If splits_config is set, analyze cannot be empty.
-      analyzer_cache: Optional input 'TransformCache' channel containing
-        cached information from previous Transform runs. When provided,
-        Transform will try use the cached calculation if possible.
+        splits_config is not set) is analyze the 'train' split and transform all
+        splits. If splits_config is set, analyze cannot be empty.
+      analyzer_cache: Optional input 'TransformCache' channel containing cached
+        information from previous Transform runs. When provided, Transform will
+        try use the cached calculation if possible.
       materialize: If True, write transformed examples as an output.
       disable_analyzer_cache: If False, Transform will use input cache if
         provided and write cache output. If True, `analyzer_cache` must not be
@@ -189,7 +178,7 @@ class Transform(base_beam_component.BaseBeamComponent):
     transformed_examples = None
     if materialize:
       transformed_examples = types.Channel(type=standard_artifacts.Examples)
-      transformed_examples.matching_channel_name = 'examples'
+      transformed_examples.matching_channel_name = "examples"
 
     (pre_transform_schema, pre_transform_stats, post_transform_schema,
      post_transform_stats, post_transform_anomalies) = (None,) * 5
@@ -207,7 +196,7 @@ class Transform(base_beam_component.BaseBeamComponent):
       updated_analyzer_cache = None
       if analyzer_cache:
         raise ValueError(
-            '`analyzer_cache` is set when disable_analyzer_cache is True.')
+            "`analyzer_cache` is set when disable_analyzer_cache is True.")
     else:
       updated_analyzer_cache = types.Channel(
           type=standard_artifacts.TransformCache)
