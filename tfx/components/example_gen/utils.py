@@ -13,6 +13,7 @@
 # limitations under the License.
 """Utilities for ExampleGen components."""
 
+
 import datetime
 import os
 import re
@@ -42,7 +43,7 @@ SPAN_SPEC = '{SPAN}'
 # and captures the string 'x'.
 SPAN_SPEC_WIDTH_REGEX = '{SPAN:(?P<width>.*?)}'
 # Full regex for matching span specs with or without width modifier.
-SPAN_FULL_REGEX = '{}|{}'.format(SPAN_SPEC, SPAN_SPEC_WIDTH_REGEX)
+SPAN_FULL_REGEX = f'{SPAN_SPEC}|{SPAN_SPEC_WIDTH_REGEX}'
 # Key for the `version` custom property of output examples artifact.
 VERSION_PROPERTY_NAME = 'version'
 # Version spec used in split pattern.
@@ -51,7 +52,7 @@ VERSION_SPEC = '{VERSION}'
 # '{VERSION:x}' and captures the string 'x'.
 VERSION_SPEC_WIDTH_REGEX = '{VERSION:(?P<width>.*?)}'
 # Full regex for matching version specs with or without width modifier.
-VERSION_FULL_REGEX = '{}|{}'.format(VERSION_SPEC, VERSION_SPEC_WIDTH_REGEX)
+VERSION_FULL_REGEX = f'{VERSION_SPEC}|{VERSION_SPEC_WIDTH_REGEX}'
 # Date specs used in split pattern.
 YEAR_SPEC = '{YYYY}'
 MONTH_SPEC = '{MM}'
@@ -112,10 +113,9 @@ def dict_to_example(instance: Dict[str, Any]) -> tf.train.Example:
             bytes_list=tf.train.BytesList(
                 value=[v.encode(_DEFAULT_ENCODING) for v in value]))
       else:
-        raise RuntimeError('Column type `list of {}` is not supported.'.format(
-            type(value[0])))
+        raise RuntimeError(f'Column type `list of {type(value[0])}` is not supported.')
     else:
-      raise RuntimeError('Column type {} is not supported.'.format(type(value)))
+      raise RuntimeError(f'Column type {type(value)} is not supported.')
   return tf.train.Example(features=tf.train.Features(feature=feature))
 
 
@@ -175,20 +175,19 @@ def generate_output_split_names(
                                split['hash_buckets'] <= 0):
         raise RuntimeError('Str-typed output split name and int-typed '
                            'hash buckets are required.')
-      result.append(split['name'])
-  else:
-    # If output is not specified, it will have the same split as the input.
-    if 'splits' in input_config:
-      for split in input_config['splits']:
-        if not split['name'] or not split['pattern']:
-          raise RuntimeError('Str-typed input split name and pattern '
-                             'are required.')
+      else:
         result.append(split['name'])
+  elif 'splits' in input_config:
+    for split in input_config['splits']:
+      if not split['name'] or not split['pattern']:
+        raise RuntimeError('Str-typed input split name and pattern '
+                           'are required.')
+      result.append(split['name'])
 
   if not result:
     raise RuntimeError('ExampleGen splits are missing.')
   if len(result) != len(set(result)):
-    raise RuntimeError('Duplicated split name {}.'.format(result))
+    raise RuntimeError(f'Duplicated split name {result}.')
 
   return result
 
@@ -251,20 +250,19 @@ def _make_zero_padding_spec_value(spec_full_regex: str, pattern: str,
                                   spec_value: int) -> str:
   """Returns spec value, applies zero padding if needed."""
   match_result = re.search(spec_full_regex, pattern)
-  assert match_result, 'No %s found in split %s' % (spec_full_regex, pattern)
-  width_str = match_result.group('width')
-  if width_str:
+  assert match_result, f'No {spec_full_regex} found in split {pattern}'
+  if width_str := match_result['width']:
     width_int = 0
     try:
       width_int = int(width_str)
     except ValueError:
-      raise ValueError('Width modifier is not a integer: %s' % pattern)
+      raise ValueError(f'Width modifier is not a integer: {pattern}')
     if width_int <= 0:
-      raise ValueError('Width modifier is not positive: %s' % pattern)
+      raise ValueError(f'Width modifier is not positive: {pattern}')
     if width_int < len(str(spec_value)):
       raise ValueError(
-          'Spec width is less than number of digits in spec: (%s, %s)' %
-          (width_int, spec_value))
+          f'Spec width is less than number of digits in spec: ({width_int}, {spec_value})'
+      )
     return str(spec_value).zfill(width_int)
   return str(spec_value)
 
@@ -286,27 +284,26 @@ def verify_split_pattern_specs(
 
   if [is_match_span, is_match_date].count(True) > 1:
     raise ValueError(
-        'Either span spec or date specs must be specified exclusively in %s' %
-        split.pattern)
+        f'Either span spec or date specs must be specified exclusively in {split.pattern}'
+    )
 
   if is_match_span and len(span_matches) != 1:
-    raise ValueError('Only one %s is allowed in %s' %
-                     (SPAN_SPEC, split.pattern))
+    raise ValueError(f'Only one {SPAN_SPEC} is allowed in {split.pattern}')
 
-  if is_match_date and not all(
-      split.pattern.count(spec) == 1 for spec in DATE_SPECS):
+  if is_match_date and any(
+      split.pattern.count(spec) != 1 for spec in DATE_SPECS):
     raise ValueError(
-        'Exactly one of each date spec (%s, %s, %s) is required in %s' %
-        (YEAR_SPEC, MONTH_SPEC, DAY_SPEC, split.pattern))
+        f'Exactly one of each date spec ({YEAR_SPEC}, {MONTH_SPEC}, {DAY_SPEC}) is required in {split.pattern}'
+    )
 
-  if is_match_version and (not is_match_span and not is_match_date):
-    raise ValueError(
-        'Version spec provided, but Span or Date spec is not present in %s' %
-        split.pattern)
+  if is_match_version:
+    if (not is_match_span and not is_match_date):
+      raise ValueError(
+          f'Version spec provided, but Span or Date spec is not present in {split.pattern}'
+      )
 
-  if is_match_version and len(version_matches) != 1:
-    raise ValueError('Only one %s is allowed in %s' %
-                     (VERSION_SPEC, split.pattern))
+    if len(version_matches) != 1:
+      raise ValueError(f'Only one {VERSION_SPEC} is allowed in {split.pattern}')
 
   return is_match_span, is_match_date, is_match_version
 
@@ -360,33 +357,34 @@ def _find_matched_span_version_from_path(
   matched_version_int = None
 
   if is_match_span:
-    matched_span_tokens = [result.group(SPAN_PROPERTY_NAME)]
+    matched_span_tokens = [result[SPAN_PROPERTY_NAME]]
     try:
       matched_span_int = int(matched_span_tokens[0])
     except ValueError:
-      raise ValueError('Cannot find %s number from %s based on %s' %
-                       (SPAN_PROPERTY_NAME, file_path, split_regex_pattern))
+      raise ValueError(
+          f'Cannot find {SPAN_PROPERTY_NAME} number from {file_path} based on {split_regex_pattern}'
+      )
   elif is_match_date:
-    matched_span_tokens = [
-        result.group(name) for name in ['year', 'month', 'day']
-    ]
+    matched_span_tokens = [result[name] for name in ['year', 'month', 'day']]
     try:
       matched_span_ints = [int(elem) for elem in matched_span_tokens]
     except ValueError:
-      raise ValueError('Cannot find %s number using date from %s based on %s' %
-                       (SPAN_PROPERTY_NAME, file_path, split_regex_pattern))
+      raise ValueError(
+          f'Cannot find {SPAN_PROPERTY_NAME} number using date from {file_path} based on {split_regex_pattern}'
+      )
     try:
       matched_span_int = date_to_span_number(*matched_span_ints)
     except ValueError:
-      raise ValueError('Retrieved date is invalid for file: %s' % file_path)
+      raise ValueError(f'Retrieved date is invalid for file: {file_path}')
 
   if is_match_version:
-    matched_version = result.group(VERSION_PROPERTY_NAME)
+    matched_version = result[VERSION_PROPERTY_NAME]
     try:
       matched_version_int = int(matched_version)
     except ValueError:
-      raise ValueError('Cannot find %s number from %s based on %s' %
-                       (VERSION_PROPERTY_NAME, file_path, split_regex_pattern))
+      raise ValueError(
+          f'Cannot find {VERSION_PROPERTY_NAME} number from {file_path} based on {split_regex_pattern}'
+      )
 
   return (matched_span_tokens, matched_span_int, matched_version,
           matched_version_int)
@@ -396,8 +394,8 @@ def _get_spec_width(spec_full_regex: str, spec_name: str,
                     split: example_gen_pb2.Input.Split) -> Optional[str]:
   """Returns width modifier of a spec, if it exists."""
   result = re.search(spec_full_regex, split.pattern)
-  assert result, 'No %s found in split %s' % (spec_name, split.pattern)
-  width_str = result.group('width')
+  assert result, f'No {spec_name} found in split {split.pattern}'
+  width_str = result['width']
   if width_str:
     try:
       width_int = int(width_str)
@@ -405,8 +403,8 @@ def _get_spec_width(spec_full_regex: str, spec_name: str,
         raise ValueError('Not a positive integer.')
     except ValueError:
       raise ValueError(
-          'Width modifier in %s spec is not a positive integer: %s' %
-          (spec_name, split.pattern))
+          f'Width modifier in {spec_name} spec is not a positive integer: {split.pattern}'
+      )
   return width_str
 
 
@@ -415,32 +413,30 @@ def _get_span_replace_glob_and_regex(
     is_match_date: bool,
     span_width_str: Optional[str]) -> Union[str, List[str]]:
   """Replace span or date spec if static range RangeConfig is provided."""
-  if range_config.HasField('static_range'):
-    if is_match_span:
-      # If using RangeConfig.static_range, replace span spec in patterns
-      # with given span from static range.
-      span_str = str(range_config.static_range.start_span_number)
-      if span_width_str:
-        span_width_int = int(span_width_str)
-        if span_width_int < len(span_str):
-          raise ValueError(
-              'Span spec width is less than number of digits in span: (%s, %s)'
-              % (span_width_int, span_str))
-        span_str = span_str.zfill(span_width_int)
-      return span_str
-
-    elif is_match_date:
-      # If using RangeConfig.static_range, replace date specs in patterns
-      # with calendar date derived from given span from static range.
-      span_int = range_config.static_range.start_span_number
-      year, month, day = span_number_to_date(span_int)
-      date_tokens = [str(year).zfill(4), str(month).zfill(2), str(day).zfill(2)]
-      return date_tokens
-
-    else:
-      raise ValueError('One of Span or Date should be specified.')
-  else:
+  if not range_config.HasField('static_range'):
     raise ValueError('Only static_range in RangeConfig is supported.')
+  if is_match_span:
+    # If using RangeConfig.static_range, replace span spec in patterns
+    # with given span from static range.
+    span_str = str(range_config.static_range.start_span_number)
+    if span_width_str:
+      span_width_int = int(span_width_str)
+      if span_width_int < len(span_str):
+        raise ValueError(
+            f'Span spec width is less than number of digits in span: ({span_width_int}, {span_str})'
+        )
+      span_str = span_str.zfill(span_width_int)
+    return span_str
+
+  elif is_match_date:
+    # If using RangeConfig.static_range, replace date specs in patterns
+    # with calendar date derived from given span from static range.
+    span_int = range_config.static_range.start_span_number
+    year, month, day = span_number_to_date(span_int)
+    return [str(year).zfill(4), str(month).zfill(2), str(day).zfill(2)]
+
+  else:
+    raise ValueError('One of Span or Date should be specified.')
 
 
 def _create_matching_glob_and_regex(
@@ -502,8 +498,7 @@ def _create_matching_glob_and_regex(
 
     split_glob_pattern = re.sub(SPAN_FULL_REGEX, span_glob_replace,
                                 split_glob_pattern)
-    span_capture_regex = '(?P<{}>{})'.format(SPAN_PROPERTY_NAME,
-                                             span_regex_replace)
+    span_capture_regex = f'(?P<{SPAN_PROPERTY_NAME}>{span_regex_replace})'
     split_regex_pattern = re.sub(SPAN_FULL_REGEX, span_capture_regex,
                                  split_regex_pattern)
 
@@ -527,21 +522,19 @@ def _create_matching_glob_and_regex(
     for spec, replace, spec_name in zip(DATE_SPECS, date_regex_replace,
                                         ['year', 'month', 'day']):
       split_regex_pattern = split_regex_pattern.replace(
-          spec, '(?P<{}>{})'.format(spec_name, replace))
+          spec, f'(?P<{spec_name}>{replace})')
 
   if is_match_version:
     # Check if version spec has any width modifier. Defaults to greedy matching
     # if no width modifiers are present.
     version_width_regex = '.*'
 
-    version_width_str = _get_spec_width(VERSION_FULL_REGEX,
-                                        VERSION_PROPERTY_NAME, split)
-    if version_width_str:
+    if version_width_str := _get_spec_width(VERSION_FULL_REGEX,
+                                            VERSION_PROPERTY_NAME, split):
       version_width_regex = '.{%s}' % version_width_str
 
     split_glob_pattern = re.sub(VERSION_FULL_REGEX, '*', split_glob_pattern)
-    version_capture_regex = '(?P<{}>{})'.format(VERSION_PROPERTY_NAME,
-                                                version_width_regex)
+    version_capture_regex = f'(?P<{VERSION_PROPERTY_NAME}>{version_width_regex})'
     split_regex_pattern = re.sub(VERSION_FULL_REGEX, version_capture_regex,
                                  split_regex_pattern)
 
@@ -628,8 +621,9 @@ def _get_target_span_version(
       latest_version_int = match_version_int
 
   if latest_span_int is None or (is_match_version and latest_version is None):
-    raise ValueError('Cannot find matching for split %s based on %s' %
-                     (split.name, split.pattern))
+    raise ValueError(
+        f'Cannot find matching for split {split.name} based on {split.pattern}'
+    )
 
   # Update split pattern so executor can find the files to ingest.
   if is_match_span:

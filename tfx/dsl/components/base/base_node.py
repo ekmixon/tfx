@@ -63,9 +63,11 @@ class BaseNode(json_utils.Jsonable, abc.ABC):
   @doc_controls.do_not_doc_in_subclasses
   def to_json_dict(self) -> Dict[str, Any]:
     """Convert from an object to a JSON serializable dictionary."""
-    return dict((k, v)
-                for k, v in self.__dict__.items()
-                if k not in ['_upstream_nodes', '_downstream_nodes'])
+    return {
+        k: v
+        for k, v in self.__dict__.items()
+        if k not in ['_upstream_nodes', '_downstream_nodes']
+    }
 
   @classmethod
   @doc_controls.do_not_doc_in_subclasses

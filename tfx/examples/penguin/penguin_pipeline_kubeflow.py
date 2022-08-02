@@ -13,6 +13,7 @@
 # limitations under the License.
 """Penguin example using TFX."""
 
+
 import os
 import sys
 from typing import Dict, List, Optional
@@ -95,18 +96,11 @@ _ai_platform_serving_args = {
 # Arguments differ according to runner. DataflowRunner is only selected in gcp
 # environment.
 _beam_pipeline_args_by_runner = {
-    # TODO(b/151114974): Remove `disk_size_gb` flag after default is increased.
-    # TODO(b/156874687): Remove `machine_type` after IP addresses are no longer
-    #                    a scaling bottleneck.
-    # TODO(b/171733562): Remove `use_runner_v2` once it is the default for
-    #                    Dataflow.
     'DataflowRunner': [
         '--runner=DataflowRunner',
-        '--project=' + _project_id,
+        f'--project={_project_id}',
         '--temp_location=' + os.path.join(_pipeline_root, 'tmp'),
-        '--region=' + _gcp_region,
-
-        # Temporary overrides of defaults.
+        f'--region={_gcp_region}',
         '--disk_size_gb=50',
         '--machine_type=e2-standard-8',
         '--experiments=use_runner_v2',
@@ -116,7 +110,7 @@ _beam_pipeline_args_by_runner = {
         # 0 means auto-detect based on on the number of CPUs available
         # during execution time.
         '--direct_num_workers=0',
-    ]
+    ],
 }
 
 # Path which can be listened to by the model server.  Pusher will output the

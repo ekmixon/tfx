@@ -93,10 +93,7 @@ class _FunctionExecutor(base_executor.BaseExecutor):
         input_list = input_dict.get(name, [])
         if len(input_list) == 1:
           function_args[name] = input_list[0]
-        elif not input_list and name in self._ARG_DEFAULTS:
-          # Do not pass the missing optional input.
-          pass
-        else:
+        elif input_list or name not in self._ARG_DEFAULTS:
           raise ValueError((
               'Expected input %r to %s to be a singleton ValueArtifact channel '
               '(got %s instead).') % (name, self, input_list))
@@ -112,20 +109,14 @@ class _FunctionExecutor(base_executor.BaseExecutor):
         input_list = input_dict.get(name, [])
         if len(input_list) == 1:
           function_args[name] = input_list[0].value
-        elif not input_list and name in self._ARG_DEFAULTS:
-          # Do not pass the missing optional input.
-          pass
-        else:
+        elif input_list or name not in self._ARG_DEFAULTS:
           raise ValueError((
               'Expected input %r to %s to be a singleton ValueArtifact channel '
               '(got %s instead).') % (name, self, input_list))
       elif arg_format == function_parser.ArgFormats.PARAMETER:
         if name in exec_properties:
           function_args[name] = exec_properties[name]
-        elif name in self._ARG_DEFAULTS:
-          # Do not pass the missing optional input.
-          pass
-        else:
+        elif name not in self._ARG_DEFAULTS:
           raise ValueError((
               'Expected non-optional parameter %r of %s to be provided, but no '
               'value was passed.') % (name, self))
@@ -264,28 +255,33 @@ def component(func: types.FunctionType) -> Callable[..., Any]:
   inputs, outputs, parameters, arg_formats, arg_defaults, returned_values = (
       function_parser.parse_typehint_component_function(func))
 
-  spec_inputs = {}
   spec_outputs = {}
-  spec_parameters = {}
-  for key, artifact_type in inputs.items():
-    spec_inputs[key] = component_spec.ChannelParameter(
-        type=artifact_type, optional=(key in arg_defaults))
+  spec_inputs = {
+      key: component_spec.ChannelParameter(
+          type=artifact_type, optional=(key in arg_defaults))
+      for key, artifact_type in inputs.items()
+  }
   for key, artifact_type in outputs.items():
     assert key not in arg_defaults, 'Optional outputs are not supported.'
     spec_outputs[key] = component_spec.ChannelParameter(type=artifact_type)
-  for key, primitive_type in parameters.items():
-    spec_parameters[key] = component_spec.ExecutionParameter(
-        type=primitive_type, optional=(key in arg_defaults))
+  spec_parameters = {
+      key: component_spec.ExecutionParameter(
+          type=primitive_type, optional=(key in arg_defaults))
+      for key, primitive_type in parameters.items()
+  }
   component_spec_class = type(
-      '%s_Spec' % func.__name__, (tfx_types.ComponentSpec,), {
+      f'{func.__name__}_Spec',
+      (tfx_types.ComponentSpec, ),
+      {
           'INPUTS': spec_inputs,
           'OUTPUTS': spec_outputs,
           'PARAMETERS': spec_parameters,
-      })
+      },
+  )
 
   executor_class = type(
-      '%s_Executor' % func.__name__,
-      (_FunctionExecutor,),
+      f'{func.__name__}_Executor',
+      (_FunctionExecutor, ),
       {
           '_ARG_FORMATS': arg_formats,
           '_ARG_DEFAULTS': arg_defaults,
@@ -295,14 +291,15 @@ def component(func: types.FunctionType) -> Callable[..., Any]:
           '_FUNCTION': staticmethod(func),
           '_RETURNED_VALUES': returned_values,
           '__module__': func.__module__,
-      })
+      },
+  )
 
   # Expose the generated executor class in the same module as the decorated
   # function. This is needed so that the executor class can be accessed at the
   # proper module path. One place this is needed is in the Dill pickler used by
   # Apache Beam serialization.
   module = sys.modules[func.__module__]
-  setattr(module, '%s_Executor' % func.__name__, executor_class)
+  setattr(module, f'{func.__name__}_Executor', executor_class)
 
   executor_spec_instance = executor_spec.ExecutorClassSpec(
       executor_class=executor_class)

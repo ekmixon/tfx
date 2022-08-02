@@ -64,8 +64,8 @@ class Executor(base_beam_executor.BaseBeamExecutor):
         blessed_model_eval_result.slicing_metrics):
       # slicing_metric is a tuple, index 0 is slice, index 1 is its value.
       if current_metric[0] != blessed_metric[0]:
-        raise RuntimeError('EvalResult not match {} vs {}.'.format(
-            current_metric[0], blessed_metric[0]))
+        raise RuntimeError(
+            f'EvalResult not match {current_metric[0]} vs {blessed_metric[0]}.')
       # TODO(b/140455644): TFMA introduced breaking change post 0.14 release.
       # Remove this forward compatibility change after 0.15 release.
       current_model_metrics = current_metric[1]
@@ -79,8 +79,8 @@ class Executor(base_beam_executor.BaseBeamExecutor):
       if (current_model_accuracy['doubleValue'] <
           blessed_model_accuracy['doubleValue']):
         absl.logging.info(
-            'Current model accuracy is worse than blessed model: {}'.format(
-                current_metric[0]))
+            f'Current model accuracy is worse than blessed model: {current_metric[0]}'
+        )
         return False
     return True
 
@@ -159,7 +159,7 @@ class Executor(base_beam_executor.BaseBeamExecutor):
     """
     self._log_startup(input_dict, output_dict, exec_properties)
     self._temp_path = self._get_tmp_dir()
-    absl.logging.info('Using temp path {} for tft.beam'.format(self._temp_path))
+    absl.logging.info(f'Using temp path {self._temp_path} for tft.beam')
 
     eval_examples_uri = artifact_utils.get_split_uri(
         input_dict[constants.EXAMPLES_KEY], 'eval')
@@ -169,7 +169,7 @@ class Executor(base_beam_executor.BaseBeamExecutor):
     # Current model to be validated.
     current_model = artifact_utils.get_single_instance(
         input_dict[constants.MODEL_KEY])
-    absl.logging.info('Using {} as current model.'.format(current_model.uri))
+    absl.logging.info(f'Using {current_model.uri} as current model.')
     blessing.set_string_custom_property(
         constants.ARTIFACT_PROPERTY_CURRENT_MODEL_URI_KEY, current_model.uri)
     blessing.set_int_custom_property(
@@ -182,7 +182,7 @@ class Executor(base_beam_executor.BaseBeamExecutor):
     # Previous blessed model to be validated against.
     blessed_model_dir = exec_properties['blessed_model']
     blessed_model_id = exec_properties['blessed_model_id']
-    absl.logging.info('Using {} as blessed model.'.format(blessed_model_dir))
+    absl.logging.info(f'Using {blessed_model_dir} as blessed model.')
     if blessed_model_dir:
       blessing.set_string_custom_property(
           constants.ARTIFACT_PROPERTY_BLESSED_MODEL_URI_KEY, blessed_model_dir)
@@ -207,9 +207,8 @@ class Executor(base_beam_executor.BaseBeamExecutor):
           os.path.join(blessing.uri, constants.NOT_BLESSED_FILE_NAME), '')
       blessing.set_int_custom_property(constants.ARTIFACT_PROPERTY_BLESSED_KEY,
                                        constants.NOT_BLESSED_VALUE)
-    absl.logging.info('Blessing result {} written to {}.'.format(
-        blessed, blessing.uri))
+    absl.logging.info(f'Blessing result {blessed} written to {blessing.uri}.')
 
     io_utils.delete_dir(self._temp_path)
-    absl.logging.info('Cleaned up temp path {} on executor success.'.format(
-        self._temp_path))
+    absl.logging.info(
+        f'Cleaned up temp path {self._temp_path} on executor success.')

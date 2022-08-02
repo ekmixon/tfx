@@ -63,6 +63,6 @@ class Driver(base_driver.BaseDriver):
      exec_properties['blessed_model_id']) = self._fetch_last_blessed_model(
          pipeline_info.pipeline_name, component_info.component_id)
     exec_properties['current_component_id'] = component_info.component_id
-    absl.logging.info('Resolved last blessed model {}'.format(
-        exec_properties['blessed_model']))
+    absl.logging.info(
+        f"Resolved last blessed model {exec_properties['blessed_model']}")
     return exec_properties

@@ -96,9 +96,9 @@ class AirflowEndToEndTest(test_case_utils.TfxTest):
 
   def _CheckPendingTasks(self, pending_task_names: Sequence[str]) -> Set[str]:
     unknown_tasks = set(pending_task_names) - set(self._all_tasks)
-    assert not unknown_tasks, 'Unknown task name {}'.format(unknown_tasks)
+    assert not unknown_tasks, f'Unknown task name {unknown_tasks}'
     still_pending = set()
-    failed = dict()
+    failed = {}
     for task in pending_task_names:
       task_state = self._GetState(task).lower()
       if task_state in _SUCCESS_TASK_STATES:
@@ -125,7 +125,7 @@ class AirflowEndToEndTest(test_case_utils.TfxTest):
     absl.logging.info('Using %s as AIRFLOW_HOME and HOME in this e2e test',
                       self._airflow_home)
 
-    self._mysql_container_name = 'airflow_' + test_utils.generate_random_id()
+    self._mysql_container_name = f'airflow_{test_utils.generate_random_id()}'
     db_port = airflow_test_utils.create_mysql_container(
         self._mysql_container_name)
     self.addCleanup(airflow_test_utils.delete_mysql_container,
@@ -176,12 +176,12 @@ class AirflowEndToEndTest(test_case_utils.TfxTest):
 
     data_dir = os.path.join(chicago_taxi_pipeline_dir, 'data', 'simple')
     content = fileio.listdir(data_dir)
-    assert content, 'content in {} is empty'.format(data_dir)
+    assert content, f'content in {data_dir} is empty'
     target_data_dir = os.path.join(self._airflow_home, 'taxi', 'data', 'simple')
     io_utils.copy_dir(data_dir, target_data_dir)
     assert fileio.isdir(target_data_dir)
     content = fileio.listdir(target_data_dir)
-    assert content, 'content in {} is {}'.format(target_data_dir, content)
+    assert content, f'content in {target_data_dir} is {content}'
     io_utils.copy_file(
         os.path.join(chicago_taxi_pipeline_dir, 'taxi_utils.py'),
         os.path.join(self._airflow_home, 'taxi', 'taxi_utils.py'))

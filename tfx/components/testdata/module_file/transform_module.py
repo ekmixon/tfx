@@ -57,7 +57,7 @@ _FARE_KEY = 'fare'
 
 
 def _transformed_name(key):
-  return key + '_xf'
+  return f'{key}_xf'
 
 
 def _fill_in_missing(x):
@@ -99,12 +99,11 @@ def preprocessing_fn(inputs, custom_config):
   Returns:
     Map from string feature key to transformed features.
   """
-  outputs = {}
-  for key in _DENSE_FLOAT_FEATURE_KEYS:
-    # Preserve this feature as a dense float, setting nan's to the mean.
-    outputs[_transformed_name(key)] = tft.scale_to_z_score(
-        _fill_in_missing(_identity(inputs[key])))
-
+  outputs = {
+      _transformed_name(key): tft.scale_to_z_score(
+          _fill_in_missing(_identity(inputs[key])))
+      for key in _DENSE_FLOAT_FEATURE_KEYS
+  }
   for key in _VOCAB_FEATURE_KEYS:
     # Build a vocabulary for this feature.
     outputs[_transformed_name(key)] = tft.compute_and_apply_vocabulary(

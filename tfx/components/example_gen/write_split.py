@@ -67,8 +67,10 @@ def WriteSplit(
               file_name_suffix='.gz'))
 
 
-def to_file_format_str(file_format: example_gen_pb2.FileFormat) -> str:  # pylint: disable=invalid-name
-  if (file_format == example_gen_pb2.FILE_FORMAT_UNSPECIFIED or
-      file_format == example_gen_pb2.FORMAT_TFRECORDS_GZIP):
+def to_file_format_str(file_format: example_gen_pb2.FileFormat) -> str:# pylint: disable=invalid-name
+  if file_format in [
+      example_gen_pb2.FILE_FORMAT_UNSPECIFIED,
+      example_gen_pb2.FORMAT_TFRECORDS_GZIP,
+  ]:
     return 'tfrecords_gzip'
   raise ValueError('File format is not valid.')

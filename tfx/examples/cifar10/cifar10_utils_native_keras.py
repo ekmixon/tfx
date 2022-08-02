@@ -60,7 +60,7 @@ _TFLITE_MODEL_NAME = 'tflite'
 
 
 def _transformed_name(key):
-  return key + '_xf'
+  return f'{key}_xf'
 
 
 def _get_serve_image_fn(model):
@@ -168,10 +168,7 @@ def _freeze_model_by_percentage(model: tf.keras.Model, percentage: float):
   num_layers = len(model.layers)
   num_layers_to_freeze = int(num_layers * percentage)
   for idx, layer in enumerate(model.layers):
-    if idx < num_layers_to_freeze:
-      layer.trainable = False
-    else:
-      layer.trainable = True
+    layer.trainable = idx >= num_layers_to_freeze
 
 
 def _build_keras_model() -> tf.keras.Model:
@@ -225,8 +222,6 @@ def preprocessing_fn(inputs):
   Returns:
     Map from string feature key to transformed feature operations.
   """
-  outputs = {}
-
   # tf.io.decode_png function cannot be applied on a batch of data.
   # We have to use tf.map_fn
   image_features = tf.map_fn(
@@ -238,7 +233,7 @@ def preprocessing_fn(inputs):
   image_features = tf.keras.applications.mobilenet.preprocess_input(
       image_features)
 
-  outputs[_transformed_name(_IMAGE_KEY)] = image_features
+  outputs = {_transformed_name(_IMAGE_KEY): image_features}
   # TODO(b/157064428): Support label transformation for Keras.
   # Do not apply label transformation as it will result in wrong evaluation.
   outputs[_transformed_name(_LABEL_KEY)] = inputs[_LABEL_KEY]
@@ -327,7 +322,7 @@ def run_fn(fn_args: FnArgs):
 
   model, base_model = _build_keras_model()
 
-  absl.logging.info('Tensorboard logging to {}'.format(fn_args.model_run_dir))
+  absl.logging.info(f'Tensorboard logging to {fn_args.model_run_dir}')
   # Write logs to path
   tensorboard_callback = tf.keras.callbacks.TensorBoard(
       log_dir=fn_args.model_run_dir, update_freq='batch')

@@ -127,10 +127,8 @@ def create_pipeline_component_instances(text_url: str, pattern: str):
       text=grep_task.outputs['filtered_text'],
   )
 
-  component_instances = [
+  return [
       downloader_task,
       grep_task,
       print_task,
   ]
-
-  return component_instances

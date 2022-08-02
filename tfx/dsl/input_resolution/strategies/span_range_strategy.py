@@ -25,9 +25,7 @@ import ml_metadata as mlmd
 
 
 def _get_span_custom_property(artifact: types.Artifact) -> int:
-  # For backward compatibility, span may be stored as a string.
-  str_span = artifact.get_string_custom_property(utils.SPAN_PROPERTY_NAME)
-  if str_span:
+  if str_span := artifact.get_string_custom_property(utils.SPAN_PROPERTY_NAME):
     return int(str_span)
   return artifact.get_int_custom_property(utils.SPAN_PROPERTY_NAME)
 

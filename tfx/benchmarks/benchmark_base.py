@@ -44,6 +44,4 @@ class BenchmarkBase(test.Benchmark):
     result = (
         FLAGS.max_num_examples
         if FLAGS.is_parsed() else FLAGS["max_num_examples"].default)
-    if result == 0:
-      return None
-    return result
+    return None if result == 0 else result

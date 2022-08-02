@@ -55,7 +55,7 @@ def set_runtime_parameter_pb(
     if default_value:
       pb.default_value.string_value = default_value
   else:
-    raise ValueError("Got unsupported runtime parameter type: {}".format(ptype))
+    raise ValueError(f"Got unsupported runtime parameter type: {ptype}")
   return pb
 
 

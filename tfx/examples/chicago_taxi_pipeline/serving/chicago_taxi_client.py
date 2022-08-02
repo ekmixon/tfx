@@ -76,7 +76,7 @@ def _do_local_inference(host, port, serialized_examples):
 
   json_request = '{ "instances": [' + ','.join(map(str, json_examples)) + ']}'
 
-  server_url = 'http://' + host + ':' + port + '/v1/models/chicago_taxi:predict'
+  server_url = f'http://{host}:{port}/v1/models/chicago_taxi:predict'
   response = requests.post(
       server_url, data=json_request, timeout=_LOCAL_INFERENCE_TIMEOUT_SECONDS)
   response.raise_for_status()
@@ -88,12 +88,11 @@ def _do_aiplatform_inference(model, version, serialized_examples):
   """Performs inference on the model:version in AI Platform."""
   working_dir = tempfile.mkdtemp()
   instances_file = os.path.join(working_dir, 'test.json')
-  json_examples = []
-  for serialized_example in serialized_examples:
-    # The encoding follows the example in:
-    # https://github.com/GoogleCloudPlatform/training-data-analyst/blob/master/quests/tpu/invoke_model.py
-    json_examples.append('{ "inputs": { "b64": "%s" } }' %
-                         base64.b64encode(serialized_example).decode('utf-8'))
+  json_examples = [
+      '{ "inputs": { "b64": "%s" } }' %
+      base64.b64encode(serialized_example).decode('utf-8')
+      for serialized_example in serialized_examples
+  ]
   file_io.write_string_to_file(instances_file, '\n'.join(json_examples))
   gcloud_command = [
       'gcloud', 'ai-platform', 'predict', '--model', model, '--version',

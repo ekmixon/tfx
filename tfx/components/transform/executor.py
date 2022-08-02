@@ -282,15 +282,14 @@ def _FilterInternalColumn(
   if (internal_column_index is None and
       _TRANSFORM_INTERNAL_FEATURE_FOR_KEY not in record_batch.schema.names):
     return record_batch
-  else:
-    internal_column_index = (
-        internal_column_index or
-        record_batch.schema.names.index(_TRANSFORM_INTERNAL_FEATURE_FOR_KEY))
-    # Making shallow copy since input modification is not allowed.
-    filtered_columns = list(record_batch.columns)
-    filtered_columns.pop(internal_column_index)
-    filtered_schema = record_batch.schema.remove(internal_column_index)
-    return pa.RecordBatch.from_arrays(filtered_columns, schema=filtered_schema)
+  internal_column_index = (
+      internal_column_index or
+      record_batch.schema.names.index(_TRANSFORM_INTERNAL_FEATURE_FOR_KEY))
+  # Making shallow copy since input modification is not allowed.
+  filtered_columns = list(record_batch.columns)
+  filtered_columns.pop(internal_column_index)
+  filtered_schema = record_batch.schema.remove(internal_column_index)
+  return pa.RecordBatch.from_arrays(filtered_columns, schema=filtered_schema)
 
 
 class Executor(base_beam_executor.BaseBeamExecutor):

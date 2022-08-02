@@ -87,7 +87,7 @@ class _ResolverOpMeta(abc.ABCMeta):
     cls._return_data_type = return_data_type
     super().__init__(name, bases, attrs)
 
-  def __call__(cls, arg: 'OpNode', **kwargs: Any):
+  def __call__(self, arg: 'OpNode', **kwargs: Any):
     """Fake instantiation of the ResolverOp class.
 
     Original implementation of metaclass.__call__ method is to instantiate
@@ -105,30 +105,32 @@ class _ResolverOpMeta(abc.ABCMeta):
     Returns:
       An OpNode instance that represents the operator call.
     """
-    cls._check_arg(arg)
-    cls._check_kwargs(kwargs)
+    self._check_arg(arg)
+    self._check_kwargs(kwargs)
     return OpNode(
-        op_type=cls,
+        op_type=self,
         arg=arg,
-        output_data_type=cls._return_data_type,
-        kwargs=kwargs)
+        output_data_type=self._return_data_type,
+        kwargs=kwargs,
+    )
 
-  def _check_arg(cls, arg: 'OpNode'):
+  def _check_arg(self, arg: 'OpNode'):
     if not isinstance(arg, OpNode):
       raise ValueError('Cannot directly call ResolverOp with real values. Use '
                        'output of another operator as an argument.')
-    if arg.output_data_type != cls._arg_data_type:
-      raise TypeError(f'{cls.__name__} takes {cls._arg_data_type.name} type '
-                      f'but got {arg.output_data_type.name} instead.')
+    if arg.output_data_type != self._arg_data_type:
+      raise TypeError(
+          f'{self.__name__} takes {self._arg_data_type.name} type but got {arg.output_data_type.name} instead.'
+      )
 
-  def _check_kwargs(cls, kwargs: Mapping[str, Any]):
-    for name, prop in cls._props_by_name.items():
+  def _check_kwargs(self, kwargs: Mapping[str, Any]):
+    for name, prop in self._props_by_name.items():
       if prop.required and name not in kwargs:
         raise ValueError(f'Required property {name} is missing.')
     for name, value in kwargs.items():
-      if name not in cls._props_by_name:
+      if name not in self._props_by_name:
         raise KeyError(f'Unknown property {name}.')
-      prop = cls._props_by_name[name]
+      prop = self._props_by_name[name]
       prop.validate(value)
 
   def create(cls, **props: Any) -> 'ResolverOp':
@@ -304,10 +306,9 @@ class OpNode(Generic[_TOut]):
   def __repr__(self):
     if self.is_input_node:
       return 'INPUT_NODE'
-    else:
-      all_args = [repr(self.arg)]
-      all_args.extend(f'{k}={repr(v)}' for k, v in self.kwargs.items())
-      return f'{self.op_type.__qualname__}({", ".join(all_args)})'
+    all_args = [repr(self.arg)]
+    all_args.extend(f'{k}={repr(v)}' for k, v in self.kwargs.items())
+    return f'{self.op_type.__qualname__}({", ".join(all_args)})'
 
   @property
   def is_input_node(self):

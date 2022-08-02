@@ -50,10 +50,10 @@ class FilesystemRegistry:
         if (not current_preferred or
             priority < self._filesystem_priority[current_preferred]):
           self._preferred_filesystem_by_scheme[scheme] = filesystem_cls
-      if use_as_fallback:
-        if (not self._fallback_filesystem or
-            priority < self._filesystem_priority[self._fallback_filesystem]):
-          self._fallback_filesystem = filesystem_cls
+      if use_as_fallback and (
+          (not self._fallback_filesystem
+           or priority < self._filesystem_priority[self._fallback_filesystem])):
+        self._fallback_filesystem = filesystem_cls
 
   def get_filesystem_for_scheme(
       self, scheme: PathType) -> Type[filesystem.Filesystem]:
@@ -80,9 +80,8 @@ class FilesystemRegistry:
       path_bytes = path
     else:
       raise ValueError('Invalid path type: %r.' % path)
-    result = re.match(b'^([a-z0-9]+://)', path_bytes)
-    if result:
-      scheme = result.group(1).decode('utf-8')
+    if result := re.match(b'^([a-z0-9]+://)', path_bytes):
+      scheme = result[1].decode('utf-8')
     else:
       scheme = ''
     return self.get_filesystem_for_scheme(scheme)

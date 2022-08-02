@@ -120,7 +120,7 @@ class _ResolverDriver(base_driver.BaseDriver):
             artifact_utils.deserialize_artifact(a.type, a.artifact)
             for a in artifact_and_types
         ]
-        artifacts_by_id.update({a.id: a for a in artifacts})
+        artifacts_by_id |= {a.id: a for a in artifacts}
       result[key] = list(artifacts_by_id.values())
     return result
 

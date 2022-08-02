@@ -105,7 +105,7 @@ class ExecutorTest(tf.test.TestCase):
 
   def _get_results(self, path, file_name, proto_type):
     results = []
-    filepattern = os.path.join(path, file_name) + '-?????-of-?????.gz'
+    filepattern = f'{os.path.join(path, file_name)}-?????-of-?????.gz'
     for f in fileio.glob(filepattern):
       record_iterator = tf.compat.v1.python_io.tf_record_iterator(
           path=f,

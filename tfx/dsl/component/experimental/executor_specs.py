@@ -108,7 +108,7 @@ class TemplatedExecutorContainerSpec(executor_spec.ExecutorSpec):
     Returns:
       The encoded placeholder in the type of string or placeholder.Placeholder.
     """
-    if isinstance(ph, str) or isinstance(ph, placeholder.Placeholder):
+    if isinstance(ph, (str, placeholder.Placeholder)):
       # If there is no place holder. Or if the placeholder is already a
       # new style placeholder.
       # No further encoding is needed.
@@ -145,9 +145,8 @@ class TemplatedExecutorContainerSpec(executor_spec.ExecutorSpec):
           [self._recursively_encode(item, component_spec) for item in ph.items])
     else:
       raise TypeError(
-          ('Unsupported type of placeholder arguments: "{}".'
-           ' Supported types are {}.')
-          .format(type(ph), str(placeholders.CommandlineArgumentType)))
+          f'Unsupported type of placeholder arguments: "{type(ph)}". Supported types are {str(placeholders.CommandlineArgumentType)}.'
+      )
 
   def encode(
       self,

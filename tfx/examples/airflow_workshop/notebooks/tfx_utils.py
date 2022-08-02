@@ -75,9 +75,8 @@ class TFXReadonlyMetadataStore(utils.ReadonlyMetadataStore):
     Returns:
       A SlicingMetricsViewer object if in Jupyter notebook; None if in Colab.
     """
-    tfma_artifact = self.get_dest_artifact_of_type(model_id,
-                                                   TFXArtifactTypes.MODEL_EVAL)
-    if tfma_artifact:
+    if tfma_artifact := self.get_dest_artifact_of_type(
+        model_id, TFXArtifactTypes.MODEL_EVAL):
       return tfma.view.render_slicing_metrics(
           tfma.load_eval_result(tfma_artifact.uri),
           slicing_column=slicing_column)
@@ -114,9 +113,8 @@ class TFXReadonlyMetadataStore(utils.ReadonlyMetadataStore):
         artifact.
       split: A `string` specifying the split name, by default 'train' is used.
     """
-    stats_artifact = self.get_dest_artifact_of_type(
-        examples_id, TFXArtifactTypes.EXAMPLE_STATS)
-    if stats_artifact:
+    if stats_artifact := self.get_dest_artifact_of_type(
+        examples_id, TFXArtifactTypes.EXAMPLE_STATS):
       tfdv.visualize_statistics(
           tfdv.load_statistics(
               os.path.join(stats_artifact.uri, split, 'stats_tfrecord')))
@@ -152,9 +150,8 @@ class TFXReadonlyMetadataStore(utils.ReadonlyMetadataStore):
 
   def display_examples_stats_for_model(self, model_id):
     """Displays stats for examples used to train `model_id`."""
-    examples_artifact = self.get_source_artifact_of_type(
-        model_id, TFXArtifactTypes.EXAMPLES)
-    if examples_artifact:
+    if examples_artifact := self.get_source_artifact_of_type(
+        model_id, TFXArtifactTypes.EXAMPLES):
       self.display_stats_for_examples(examples_artifact.id)
 
   def compare_examples_stats_for_models(self, model_id, other_model_id):
@@ -167,8 +164,9 @@ class TFXReadonlyMetadataStore(utils.ReadonlyMetadataStore):
       self.compare_stats_for_examples(
           examples_artifact.id,
           other_examples_artifact.id,
-          name='model_' + str(model_id),
-          other_name='model_' + str(other_model_id))
+          name=f'model_{str(model_id)}',
+          other_name=f'model_{str(other_model_id)}',
+      )
 
   def display_tensorboard(self, model_id, *other_model_ids):
     """Returns a Tensorboard link for `model_id` and `other_model_ids`.
@@ -183,16 +181,12 @@ class TFXReadonlyMetadataStore(utils.ReadonlyMetadataStore):
     model_ids = [model_id] + list(other_model_ids)
     model_artifacts = self.metadata_store.get_artifacts_by_id(model_ids)
     model_ids_str = '-'.join([str(m) for m in model_ids])
-    log_file = os.path.join(
-        os.environ['HOME'],
-        'tensorboard_model_{}_log.txt'.format(model_ids_str),
-    )
+    log_file = os.path.join(os.environ['HOME'],
+                            f'tensorboard_model_{model_ids_str}_log.txt')
     output_notebook_path = os.path.join(
-        os.environ['HOME'],
-        'spawn_tensorboard_{}_output.ipynb'.format(model_ids_str),
-    )
+        os.environ['HOME'], f'spawn_tensorboard_{model_ids_str}_output.ipynb')
     tensorboard_logdir = ','.join(
-        ['model_{}:{}'.format(m.id, m.uri) for m in model_artifacts])
+        [f'model_{m.id}:{m.uri}' for m in model_artifacts])
     pm.execute_notebook(
         'spawn_tensorboard.ipynb',
         output_notebook_path,

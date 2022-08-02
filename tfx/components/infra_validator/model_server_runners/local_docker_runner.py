@@ -57,13 +57,12 @@ def _find_host_port(ports: Dict[str, Any], container_port: int) -> str:
   Raises:
     ValueError: No corresponding host port was found.
   """
-  mappings = ports.get('{}/tcp'.format(container_port))
-  if mappings:
+  if mappings := ports.get(f'{container_port}/tcp'):
     return mappings[0].get('HostPort')
   else:
     raise ValueError(
-        'No HostPort found for ContainerPort={} (all port mappings: {})'
-        .format(container_port, ports))
+        f'No HostPort found for ContainerPort={container_port} (all port mappings: {ports})'
+    )
 
 
 class LocalDockerRunner(base_runner.BaseModelServerRunner):
@@ -104,15 +103,14 @@ class LocalDockerRunner(base_runner.BaseModelServerRunner):
     assert self._container is None, (
         'You cannot start model server multiple times.')
 
-    if isinstance(self._serving_binary, serving_bins.TensorFlowServing):
-      is_local = os.path.isdir(self._model_path)
-      run_params = self._serving_binary.MakeDockerRunParams(
-          model_path=self._model_path,
-          needs_mount=is_local)
-    else:
-      raise NotImplementedError('Unsupported serving binary {}'.format(
-          type(self._serving_binary).__name__))
+    if not isinstance(self._serving_binary, serving_bins.TensorFlowServing):
+      raise NotImplementedError(
+          f'Unsupported serving binary {type(self._serving_binary).__name__}')
 
+    is_local = os.path.isdir(self._model_path)
+    run_params = self._serving_binary.MakeDockerRunParams(
+        model_path=self._model_path,
+        needs_mount=is_local)
     logging.info('Running container with parameter %s', run_params)
     self._container = self._docker.containers.run(**run_params)
 
@@ -139,13 +137,13 @@ class LocalDockerRunner(base_runner.BaseModelServerRunner):
       if status == 'running':
         host_port = _find_host_port(self._container.ports,
                                     self._serving_binary.container_port)
-        self._endpoint = 'localhost:{}'.format(host_port)
+        self._endpoint = f'localhost:{host_port}'
         return
       # Docker status is one of {'created', 'restarting', 'running', 'removing',
       # 'paused', 'exited', or 'dead'}. Status other than 'created' and
       # 'running' indicates the job has been aborted.
       raise error_types.JobAborted(
-          'Job has been aborted (container status={})'.format(status))
+          f'Job has been aborted (container status={status})')
 
     raise error_types.DeadlineExceeded(
         'Deadline exceeded while waiting for the container to be running.')

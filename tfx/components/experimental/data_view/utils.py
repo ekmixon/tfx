@@ -36,4 +36,4 @@ def get_data_view_uri(examples: types.Artifact) -> Optional[str]:
       'examples must be of type standard_artifacts.Examples')
   data_view_uri = examples.get_string_custom_property(
       constants.DATA_VIEW_URI_PROPERTY_KEY)
-  return data_view_uri if data_view_uri else None
+  return data_view_uri or None

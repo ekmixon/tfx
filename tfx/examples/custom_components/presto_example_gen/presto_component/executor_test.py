@@ -87,8 +87,7 @@ class ExecutorTest(tf.test.TestCase):
               },
               split_pattern='SELECT i, f, s FROM `fake`'))
 
-      feature = {}
-      feature['i'] = tf.train.Feature(int64_list=tf.train.Int64List(value=[1]))
+      feature = {'i': tf.train.Feature(int64_list=tf.train.Int64List(value=[1]))}
       feature['f'] = tf.train.Feature(
           float_list=tf.train.FloatList(value=[2.0]))
       feature['s'] = tf.train.Feature(

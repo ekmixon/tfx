@@ -43,7 +43,7 @@ def create_pipeline():
   metadata_path = os.path.join(tfx_root, 'metadata', pipeline_name,
                                'metadata.db')
 
-  pipeline = pipeline_module.Pipeline(
+  return pipeline_module.Pipeline(
       pipeline_name=pipeline_name,
       pipeline_root=pipeline_root,
       components=component_instances,
@@ -51,7 +51,6 @@ def create_pipeline():
       metadata_connection_config=metadata.sqlite_metadata_connection_config(
           metadata_path),
   )
-  return pipeline
 
 
 def run_pipeline_on_beam():

@@ -83,11 +83,8 @@ class Executor(base_executor.BaseExecutor):
         stats = tfdv.load_statistics(stats_uri)
       else:
         stats = tfdv.load_stats_binary(stats_uri)
-      if not schema:
-        schema = tfdv.infer_schema(stats, infer_feature_shape)
-      else:
-        schema = tfdv.update_schema(schema, stats, infer_feature_shape)
-
+      schema = (tfdv.update_schema(schema, stats, infer_feature_shape)
+                if schema else tfdv.infer_schema(stats, infer_feature_shape))
     output_uri = os.path.join(
         artifact_utils.get_single_uri(
             output_dict[standard_component_specs.SCHEMA_KEY]),

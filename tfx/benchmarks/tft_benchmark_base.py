@@ -371,7 +371,7 @@ class TFTBenchmarkBase(benchmark_base.BenchmarkBase):
           batch, produce_eager_tensors=False)
       feed_list = [feed_by_name[name] for name in input_tensor_keys]
       outputs_list = callable_get_outputs(*feed_list)
-      _ = {key: value for key, value in zip(outputs_tensor_keys, outputs_list)}
+      _ = dict(zip(outputs_tensor_keys, outputs_list))
     end = time.time()
     delta = end - start
 

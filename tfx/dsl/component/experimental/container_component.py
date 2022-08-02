@@ -82,16 +82,12 @@ def create_container_component(
   if parameters is None:
     parameters = {}
 
-  input_channel_parameters = {}
   output_channel_parameters = {}
   output_channels = {}
-  execution_parameters = {}
-
-  for input_name, channel_type in inputs.items():
-    # TODO(b/155804245) Sanitize the names so that they're valid python names
-    input_channel_parameters[input_name] = (
-        component_spec.ChannelParameter(type=channel_type,))
-
+  input_channel_parameters = {
+      input_name: (component_spec.ChannelParameter(type=channel_type, ))
+      for input_name, channel_type in inputs.items()
+  }
   for output_name, channel_type in outputs.items():
     # TODO(b/155804245) Sanitize the names so that they're valid python names
     output_channel_parameters[output_name] = (
@@ -100,12 +96,10 @@ def create_container_component(
     channel = channel_utils.as_channel([artifact])
     output_channels[output_name] = channel
 
-  for param_name, parameter_type in parameters.items():
-    # TODO(b/155804245) Sanitize the names so that they're valid python names
-
-    execution_parameters[param_name] = (
-        component_spec.ExecutionParameter(type=parameter_type))
-
+  execution_parameters = {
+      param_name: (component_spec.ExecutionParameter(type=parameter_type))
+      for param_name, parameter_type in parameters.items()
+  }
   default_init_args = {**output_channels}
 
   return component_utils.create_tfx_component_class(

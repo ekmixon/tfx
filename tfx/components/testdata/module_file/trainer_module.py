@@ -68,7 +68,7 @@ _FARE_KEY = 'fare'
 
 
 def _transformed_name(key):
-  return key + '_xf'
+  return f'{key}_xf'
 
 
 def _transformed_names(keys):

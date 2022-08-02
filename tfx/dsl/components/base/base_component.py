@@ -76,11 +76,11 @@ class BaseComponent(base_node.BaseNode, abc.ABC):
       custom_executor_spec: Optional custom executor spec overriding the default
         executor specified in the component attribute.
     """
-    if custom_executor_spec:
-      if not isinstance(custom_executor_spec, executor_spec.ExecutorSpec):
-        raise TypeError(
-            ('Custom executor spec override %s for %s should be an instance of '
-             'ExecutorSpec') % (custom_executor_spec, self.__class__))
+    if custom_executor_spec and not isinstance(custom_executor_spec,
+                                               executor_spec.ExecutorSpec):
+      raise TypeError(
+          ('Custom executor spec override %s for %s should be an instance of '
+           'ExecutorSpec') % (custom_executor_spec, self.__class__))
 
     executor_spec_obj = custom_executor_spec or self.__class__.EXECUTOR_SPEC
     # TODO(b/171742415): Remove this try-catch block once we migrate Beam
@@ -190,11 +190,10 @@ class BaseComponent(base_node.BaseNode, abc.ABC):
       if isinstance(dependency, str):
         new_pip_dependencies.append(dependency)
       elif isinstance(dependency, _PipDependencyFuture):
-        resolved_dependency = dependency.resolve(pipeline_root)
-        if resolved_dependency:
+        if resolved_dependency := dependency.resolve(pipeline_root):
           new_pip_dependencies.append(resolved_dependency)
       else:
-        raise ValueError('Invalid pip dependency object: %s.' % dependency)
+        raise ValueError(f'Invalid pip dependency object: {dependency}.')
     self._pip_dependencies = new_pip_dependencies
 
 

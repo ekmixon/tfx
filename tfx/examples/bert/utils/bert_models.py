@@ -53,8 +53,7 @@ def build_bert_classifier(bert_layer: tf.keras.layers.Layer,
   pooled_output, _ = bert_layer(converted_layers)
   output = keras.layers.Dropout(dropout)(pooled_output)
   output = keras.layers.Dense(num_classes, activation=activation)(output)
-  model = keras.Model(input_layers, output)
-  return model
+  return keras.Model(input_layers, output)
 
 
 def compile_bert_classifier(

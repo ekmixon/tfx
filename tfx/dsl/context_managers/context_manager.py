@@ -168,12 +168,10 @@ class _DslContextRegistry(threading.local):
 
   def get_contexts(self, node: _BaseNode) -> List[DslContext]:
     """Gets all DslContexts that the node belongs to."""
-    # This is O(N^2), but not performance critical.
-    result = []
-    for context in self._all:
-      if node in self._nodes_by_context_ids[context.id]:
-        result.append(context)
-    return result
+    return [
+        context for context in self._all
+        if node in self._nodes_by_context_ids[context.id]
+    ]
 
 
 # Currently we don't have a mechanism to figure out the beginning and the end

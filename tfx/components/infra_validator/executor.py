@@ -92,7 +92,7 @@ def _create_model_server_runner(
         serving_spec=serving_spec
     )
   else:
-    raise NotImplementedError('Invalid serving_platform {}'.format(platform))
+    raise NotImplementedError(f'Invalid serving_platform {platform}')
 
 
 def _convert_to_prediction_log(request: iv_types.Request):

@@ -112,8 +112,9 @@ class ExecutorTest(tf.test.TestCase):
     self._verify_output()
 
   def testDoWithTunerFn(self):
-    self._exec_properties[standard_component_specs.TUNER_FN_KEY] = '%s.%s' % (
-        tuner_module.tuner_fn.__module__, tuner_module.tuner_fn.__name__)
+    self._exec_properties[
+        standard_component_specs.
+        TUNER_FN_KEY] = f'{tuner_module.tuner_fn.__module__}.{tuner_module.tuner_fn.__name__}'
 
     tuner = executor.Executor(self._context)
     tuner.Do(

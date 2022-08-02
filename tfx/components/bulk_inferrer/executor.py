@@ -158,14 +158,10 @@ class Executor(base_beam_executor.BaseBeamExecutor):
     for example_artifact in examples:
       for split in artifact_utils.decode_split_names(
           example_artifact.split_names):
-        if data_spec.example_splits:
-          if split in data_spec.example_splits:
-            example_uris[split] = artifact_utils.get_split_uri(
-                [example_artifact], split)
-        else:
-          example_uris[split] = artifact_utils.get_split_uri([example_artifact],
-                                                             split)
-
+        if (data_spec.example_splits and split in data_spec.example_splits
+            or not data_spec.example_splits):
+          example_uris[split] = artifact_utils.get_split_uri(
+              [example_artifact], split)
     payload_format, _ = tfxio_utils.resolve_payload_format_and_data_view_uri(
         examples)
 
@@ -187,24 +183,21 @@ class Executor(base_beam_executor.BaseBeamExecutor):
       data_list = []
       for split, example_uri in example_uris.items():
         tfxio = tfxio_factory([io_utils.all_files_pattern(example_uri)])
-        assert isinstance(tfxio, record_based_tfxio.RecordBasedTFXIO), (
-            'Unable to use TFXIO {} as it does not support reading raw records.'
-            .format(type(tfxio)))
+        assert isinstance(
+            tfxio, record_based_tfxio.RecordBasedTFXIO
+        ), f'Unable to use TFXIO {type(tfxio)} as it does not support reading raw records.'
         # pylint: disable=no-value-for-parameter
-        data = (pipeline
-                | 'ReadData[{}]'.format(split) >> tfxio.RawRecordBeamSource()
-                | 'RunInference[{}]'.format(split) >> _RunInference(
+        data = (pipeline | f'ReadData[{split}]' >> tfxio.RawRecordBeamSource()
+                ) | (f'RunInference[{split}]' >> _RunInference(
                     payload_format, inference_endpoint))
         if output_examples:
           output_examples_split_uri = artifact_utils.get_split_uri(
               [output_examples], split)
           logging.info('Path of output examples split `%s` is %s.', split,
                        output_examples_split_uri)
-          _ = (
-              data
-              | 'WriteExamples[{}]'.format(split) >> _WriteExamples(
-                  output_example_spec, output_examples_split_uri))
-          # pylint: enable=no-value-for-parameter
+          _ = data | (f'WriteExamples[{split}]' >> _WriteExamples(
+              output_example_spec, output_examples_split_uri))
+                # pylint: enable=no-value-for-parameter
 
         data_list.append(data)
 
@@ -235,8 +228,8 @@ def _MakeParseFn(
     return tf.train.SequenceExample.FromString
   else:
     raise NotImplementedError(
-        'Payload format %s is not supported.' %
-        example_gen_pb2.PayloadFormat.Name(payload_format))
+        f'Payload format {example_gen_pb2.PayloadFormat.Name(payload_format)} is not supported.'
+    )
 
 
 @beam.ptransform_fn

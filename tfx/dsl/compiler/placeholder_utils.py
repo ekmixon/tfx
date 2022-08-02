@@ -436,11 +436,11 @@ class _ExpressionResolver:
     lhs_value = self.resolve(op.lhs)
     rhs_value = self.resolve(op.rhs)
     if op.op == _Operation.EQUAL.value:
-      return bool(lhs_value == rhs_value)
+      return lhs_value == rhs_value
     elif op.op == _Operation.LESS_THAN.value:
-      return bool(lhs_value < rhs_value)
+      return lhs_value < rhs_value
     elif op.op == _Operation.GREATER_THAN.value:
-      return bool(lhs_value > rhs_value)
+      return lhs_value > rhs_value
 
     raise ValueError(f"Unrecognized comparison operation {op.op}")
 

@@ -79,8 +79,7 @@ class BaseBeamExecutor(BaseExecutor):
     if self._beam_pipeline_args:
       self._beam_pipeline_args = dependency_utils.make_beam_dependency_flags(
           self._beam_pipeline_args)
-      executor_class_path = '%s.%s' % (self.__class__.__module__,
-                                       self.__class__.__name__)
+      executor_class_path = f'{self.__class__.__module__}.{self.__class__.__name__}'
       # TODO(zhitaoli): Rethink how we can add labels and only normalize them
       # if the job is submitted against GCP.
       with telemetry_utils.scoped_labels(

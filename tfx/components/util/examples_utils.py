@@ -43,12 +43,11 @@ def get_payload_format(examples: types.Artifact) -> int:
     return example_gen_pb2.PayloadFormat.Value(
         examples.get_string_custom_property(
             example_gen_utils.PAYLOAD_FORMAT_PROPERTY_NAME))
-  else:
-    logging.warning('Examples artifact does not have %s custom property. '
-                    'Falling back to %s',
-                    example_gen_utils.PAYLOAD_FORMAT_PROPERTY_NAME,
-                    example_gen_pb2.PayloadFormat.Name(_DEFAULT_PAYLOAD_FORMAT))
-    return _DEFAULT_PAYLOAD_FORMAT
+  logging.warning('Examples artifact does not have %s custom property. '
+                  'Falling back to %s',
+                  example_gen_utils.PAYLOAD_FORMAT_PROPERTY_NAME,
+                  example_gen_pb2.PayloadFormat.Name(_DEFAULT_PAYLOAD_FORMAT))
+  return _DEFAULT_PAYLOAD_FORMAT
 
 
 def get_payload_format_string(examples: types.Artifact) -> str:

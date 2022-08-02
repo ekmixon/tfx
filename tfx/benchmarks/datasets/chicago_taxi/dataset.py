@@ -79,11 +79,8 @@ class ChicagoTaxiDataset(benchmark_dataset.BenchmarkDataset):
       tfrecords_output_path: Path to output TFRecords file containing parsed
         examples.
     """
-    # Copied from CSV example gen.
-    fp = open(csv_path, "r")
-    column_names = next(fp).strip().split(",")
-    fp.close()
-
+    with open(csv_path, "r") as fp:
+      column_names = next(fp).strip().split(",")
     with beam.Pipeline() as p:
       parsed_csv_lines = (
           p
@@ -240,24 +237,26 @@ class WideChicagoTaxiDataset(ChicagoTaxiDataset):
           itertools.islice(
               itertools.cycle(self._BUCKETIZE_KEYS),
               self._num_bucketize)):
-        outputs["bucketized" + str(idx)] = tft.bucketize(
+        outputs[f"bucketized{str(idx)}"] = tft.bucketize(
             taxi_utils._fill_in_missing(inputs[key]),
-            taxi_utils._FEATURE_BUCKET_COUNT)
+            taxi_utils._FEATURE_BUCKET_COUNT,
+        )
 
       for idx, key in enumerate(
           itertools.islice(itertools.cycle(self._SCALE_KEYS), self._num_scale)):
         # Preserve this feature as a dense float, setting nan's to the mean.
-        outputs["scaled" + str(idx)] = tft.scale_to_z_score(
+        outputs[f"scaled{str(idx)}"] = tft.scale_to_z_score(
             taxi_utils._fill_in_missing(inputs[key]))
 
       for idx, key in enumerate(
           itertools.islice(
               itertools.cycle(self._VOCABULARY_KEYS),
               self._num_vocabs)):
-        outputs["vocab" + str(idx)] = tft.compute_and_apply_vocabulary(
+        outputs[f"vocab{str(idx)}"] = tft.compute_and_apply_vocabulary(
             taxi_utils._fill_in_missing(inputs[key]),
             top_k=taxi_utils._VOCAB_SIZE,
-            num_oov_buckets=taxi_utils._OOV_SIZE)
+            num_oov_buckets=taxi_utils._OOV_SIZE,
+        )
 
       # Pass-through features.
       for key in taxi_utils._CATEGORICAL_FEATURE_KEYS + [taxi_utils._LABEL_KEY]:

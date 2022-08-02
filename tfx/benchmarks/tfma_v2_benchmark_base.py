@@ -119,9 +119,7 @@ class TFMAV2BenchmarkBase(benchmark_base.BenchmarkBase):
     # dataset.
     limit = 100000
     parent_max = super()._max_num_examples()
-    if parent_max is None:
-      return limit
-    return min(parent_max, limit)
+    return limit if parent_max is None else min(parent_max, limit)
 
   def report_benchmark(self, **kwargs):
     if "extras" not in kwargs:
@@ -135,8 +133,7 @@ class TFMAV2BenchmarkBase(benchmark_base.BenchmarkBase):
         getattr(tfma, "GIT_COMMIT_ID", None) or
         getattr(tfma, "__version__", None))
     # Stdout for use in tools which read the benchmark results from stdout.
-    print(self._get_name(), kwargs["wall_time"],
-          "({}x)".format(kwargs["iters"]))
+    print(self._get_name(), kwargs["wall_time"], f'({kwargs["iters"]}x)')
     super().report_benchmark(**kwargs)
 
   def _runMiniPipeline(self, multi_model):
@@ -213,11 +210,11 @@ class TFMAV2BenchmarkBase(benchmark_base.BenchmarkBase):
 
   def _readDatasetIntoExtracts(self):
     """Read the raw dataset and massage examples into Extracts."""
-    records = []
-    for x in self._dataset.read_raw_dataset(
-        deserialize=False, limit=self._max_num_examples()):
-      records.append({tfma.INPUT_KEY: x, tfma.SLICE_KEY_TYPES_KEY: ()})
-    return records
+    return [{
+        tfma.INPUT_KEY: x,
+        tfma.SLICE_KEY_TYPES_KEY: ()
+    } for x in self._dataset.read_raw_dataset(
+        deserialize=False, limit=self._max_num_examples())]
 
   def _readDatasetIntoBatchedExtracts(self):
     """Read the raw dataset and massage examples into batched Extracts."""
@@ -240,18 +237,11 @@ class TFMAV2BenchmarkBase(benchmark_base.BenchmarkBase):
     return batches
 
   def _transform_labels(self, labels):
-    # Transform labels to [0, 1] so we can test metrics that require labels in
-    # that range.
-    if len(self._eval_config.model_specs) > 1:
-      updated_labels = []
-      for v in labels:
-        updated_labels.append({
-            s.name: 1.0 / (1.0 + v[s.name])
-            for s in self._eval_config.model_specs
-        })
-    else:
-      updated_labels = [1.0 / (1.0 + x) for x in labels]
-    return updated_labels
+    return ([{
+        s.name: 1.0 / (1.0 + v[s.name])
+        for s in self._eval_config.model_specs
+    } for v in labels] if len(self._eval_config.model_specs) > 1 else
+            [1.0 / (1.0 + x) for x in labels])
 
   def _extract_features_and_labels(self, batched_extract):
     """Extract features from extracts containing arrow table."""
@@ -280,9 +270,9 @@ class TFMAV2BenchmarkBase(benchmark_base.BenchmarkBase):
 
     start = time.time()
     for _ in range(_ITERS):
-      for elem in records:
-        extracts.append(
-            legacy_input_extractor._ParseExample(elem, self._eval_config))  # pylint: disable=protected-access
+      extracts.extend(
+          legacy_input_extractor._ParseExample(elem, self._eval_config)
+          for elem in records)
     end = time.time()
     delta = end - start
     self.report_benchmark(
@@ -301,12 +291,11 @@ class TFMAV2BenchmarkBase(benchmark_base.BenchmarkBase):
     self._init_model(multi_model, validation=False)
     extracts = self._readDatasetIntoBatchedExtracts()
     num_examples = sum(
-        [e[constants.ARROW_RECORD_BATCH_KEY].num_rows for e in extracts])
+        e[constants.ARROW_RECORD_BATCH_KEY].num_rows for e in extracts)
     result = []
     start = time.time()
     for _ in range(_ITERS):
-      for e in extracts:
-        result.append(self._extract_features_and_labels(e))
+      result.extend(self._extract_features_and_labels(e) for e in extracts)
     end = time.time()
     delta = end - start
     self.report_benchmark(
@@ -325,7 +314,7 @@ class TFMAV2BenchmarkBase(benchmark_base.BenchmarkBase):
     self._init_model(multi_model, validation=False)
     extracts = self._readDatasetIntoBatchedExtracts()
     num_examples = sum(
-        [e[constants.ARROW_RECORD_BATCH_KEY].num_rows for e in extracts])
+        e[constants.ARROW_RECORD_BATCH_KEY].num_rows for e in extracts)
     extracts = [self._extract_features_and_labels(e) for e in extracts]
 
     prediction_do_fn = model_util.ModelSignaturesDoFn(
@@ -370,7 +359,7 @@ class TFMAV2BenchmarkBase(benchmark_base.BenchmarkBase):
 
     extracts = self._readDatasetIntoBatchedExtracts()
     num_examples = sum(
-        [e[constants.ARROW_RECORD_BATCH_KEY].num_rows for e in extracts])
+        e[constants.ARROW_RECORD_BATCH_KEY].num_rows for e in extracts)
     extracts = [self._extract_features_and_labels(e) for e in extracts]
 
     prediction_do_fn = model_util.ModelSignaturesDoFn(
@@ -410,13 +399,11 @@ class TFMAV2BenchmarkBase(benchmark_base.BenchmarkBase):
                   metrics_specs, eval_config=self._eval_config)))
       # pylint: enable=protected-access
 
-      processed = []
-      for elem in unbatched_extracts:
-        processed.append(
-            next(
-                metrics_plots_and_validations_evaluator._PreprocessorDoFn(  # pylint: disable=protected-access
-                    computations).process(elem)))
-
+      processed = [
+          next(
+              metrics_plots_and_validations_evaluator._PreprocessorDoFn(  # pylint: disable=protected-access
+                  computations).process(elem)) for elem in unbatched_extracts
+      ]
       combiner = metrics_plots_and_validations_evaluator._ComputationsCombineFn(  # pylint: disable=protected-access
           computations=computations)
       if with_confidence_intervals:
@@ -442,9 +429,9 @@ class TFMAV2BenchmarkBase(benchmark_base.BenchmarkBase):
     if example_count_key in final_output:
       example_count = final_output[example_count_key]
     else:
-      raise ValueError("example_count_key ({}) was not in the final list of "
-                       "metrics. metrics were: {}".format(
-                           example_count_key, final_output))
+      raise ValueError(
+          f"example_count_key ({example_count_key}) was not in the final list of metrics. metrics were: {final_output}"
+      )
 
     if with_confidence_intervals:
       # If we're computing using confidence intervals, the example count will
@@ -455,12 +442,9 @@ class TFMAV2BenchmarkBase(benchmark_base.BenchmarkBase):
         raise ValueError("example count out of bounds: expecting "
                          "%d < example_count < %d, but got %d" %
                          (lower_bound, upper_bound, example_count))
-    else:
-      # If we're not using confidence intervals, we expect the example count to
-      # be exact.
-      if example_count != num_examples:
-        raise ValueError("example count mismatch: expecting %d got %d" %
-                         (num_examples, example_count))
+    elif example_count != num_examples:
+      raise ValueError("example count mismatch: expecting %d got %d" %
+                       (num_examples, example_count))
 
     self.report_benchmark(
         iters=_ITERS,

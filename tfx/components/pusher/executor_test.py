@@ -119,7 +119,7 @@ class ExecutorTest(tf.test.TestCase):
     infra_blessing = standard_artifacts.InfraBlessing()
     infra_blessing.set_int_custom_property('blessed', 1)  # Blessed.
     input_dict = {standard_component_specs.INFRA_BLESSING_KEY: [infra_blessing]}
-    input_dict.update(self._input_dict)
+    input_dict |= self._input_dict
 
     # Run executor
     self._executor.Do(input_dict, self._output_dict, self._exec_properties)
@@ -133,7 +133,7 @@ class ExecutorTest(tf.test.TestCase):
     infra_blessing = standard_artifacts.InfraBlessing()
     infra_blessing.set_int_custom_property('blessed', 0)  # Not blessed.
     input_dict = {standard_component_specs.INFRA_BLESSING_KEY: [infra_blessing]}
-    input_dict.update(self._input_dict)
+    input_dict |= self._input_dict
 
     # Run executor
     self._executor.Do(input_dict, self._output_dict, self._exec_properties)

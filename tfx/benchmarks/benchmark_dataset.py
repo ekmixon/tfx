@@ -30,9 +30,8 @@ class BenchmarkDataset:
         file is located at runtime will be used to infer the location of
         `tfx/benchmarks/datasets`.
     """
-    self._base_dir = (
-        base_dir if base_dir else os.path.join(
-            os.path.dirname(__file__), "datasets"))
+    self._base_dir = base_dir or os.path.join(
+        os.path.dirname(__file__), "datasets")
 
   def datasets_dir(self, subdir=""):
     """Returns the path to the datasets directory.

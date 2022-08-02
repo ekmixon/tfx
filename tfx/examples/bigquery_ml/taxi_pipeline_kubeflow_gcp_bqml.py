@@ -13,6 +13,7 @@
 # limitations under the License.
 """Chicago Taxi example using TFX DSL on Kubeflow with Google Cloud services."""
 
+
 import os
 from typing import Dict, List
 from tfx.components import Evaluator
@@ -93,11 +94,9 @@ _bigquery_serving_args = {
 # TODO(b/171733562): Remove `use_runner_v2` once it is the default for Dataflow.
 _beam_pipeline_args = [
     '--runner=DataflowRunner',
-    '--project=' + _project_id,
+    f'--project={_project_id}',
     '--temp_location=' + os.path.join(_output_bucket, 'tmp'),
-    '--region=' + _gcp_region,
-
-    # Temporary overrides of defaults.
+    f'--region={_gcp_region}',
     '--disk_size_gb=50',
     '--machine_type=e2-standard-8',
     '--experiments=use_runner_v2',

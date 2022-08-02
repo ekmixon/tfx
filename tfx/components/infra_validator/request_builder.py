@@ -72,19 +72,18 @@ def build_requests(  # pylint: disable=invalid-name
   num_examples = request_spec.num_examples or _DEFAULT_NUM_EXAMPLES
 
   kind = request_spec.WhichOneof('kind')
-  if kind == _TENSORFLOW_SERVING:
-    spec = request_spec.tensorflow_serving
-    signatures = _parse_saved_model_signatures(
-        model_path=path_utils.serving_model_path(
-            model.uri, path_utils.is_old_model_artifact(model)),
-        tag_set=spec.tag_set,
-        signature_names=spec.signature_names)
-    builder = _TFServingRpcRequestBuilder(
-        model_name=model_name,
-        signatures=signatures)
-  else:
+  if kind != _TENSORFLOW_SERVING:
     raise NotImplementedError('Unsupported RequestSpec kind {!r}'.format(kind))
 
+  spec = request_spec.tensorflow_serving
+  signatures = _parse_saved_model_signatures(
+      model_path=path_utils.serving_model_path(
+          model.uri, path_utils.is_old_model_artifact(model)),
+      tag_set=spec.tag_set,
+      signature_names=spec.signature_names)
+  builder = _TFServingRpcRequestBuilder(
+      model_name=model_name,
+      signatures=signatures)
   builder.ReadExamplesArtifact(
       examples,
       split_name=split_name,
@@ -123,8 +122,9 @@ def _parse_saved_model_signatures(  # pylint: disable=invalid-name
   result = {}
   for signature_name in signature_names:
     if signature_name not in meta_graph_def.signature_def:
-      raise ValueError('SignatureDef of name {} could not be found in '
-                       'MetaGraphDef'.format(signature_name))
+      raise ValueError(
+          f'SignatureDef of name {signature_name} could not be found in MetaGraphDef'
+      )
     result[signature_name] = meta_graph_def.signature_def[signature_name]
   return result
 
@@ -161,7 +161,7 @@ class _BaseRequestBuilder(abc.ABC):
       raise RuntimeError('Cannot read records twice.')
 
     if num_examples < 1:
-      raise ValueError('num_examples < 1 (got {})'.format(num_examples))
+      raise ValueError(f'num_examples < 1 (got {num_examples})')
 
     available_splits = artifact_utils.decode_split_names(examples.split_names)
     if not available_splits:
@@ -170,8 +170,8 @@ class _BaseRequestBuilder(abc.ABC):
       split_name = available_splits[0]
     if split_name not in available_splits:
       raise ValueError(
-          'No split_name {}; available split names: {}'.format(
-              split_name, ', '.join(available_splits)))
+          f"No split_name {split_name}; available split names: {', '.join(available_splits)}"
+      )
 
     # ExampleGen generates artifacts under each split_name directory.
     glob_pattern = os.path.join(
@@ -184,8 +184,7 @@ class _BaseRequestBuilder(abc.ABC):
         raw_record_column_name=_RAW_RECORDS_COLUMN)
     filenames = fileio.glob(glob_pattern)
     if not filenames:
-      raise ValueError('Unable to find examples matching {}.'.format(
-          glob_pattern))
+      raise ValueError(f'Unable to find examples matching {glob_pattern}.')
 
     self._payload_format = examples_utils.get_payload_format(examples)
     tfxio = tfxio_factory(filenames)
@@ -248,8 +247,8 @@ class _TFServingRpcRequestBuilder(_BaseRequestBuilder):
       if (self._payload_format !=
           example_gen_pb2.PayloadFormat.FORMAT_TF_EXAMPLE):
         raise ValueError(
-            'Data payload format should be FORMAT_TF_EXAMPLE. Got: {}'.format(
-                example_gen_pb2.PayloadFormat.Name(self._payload_format)))
+            f'Data payload format should be FORMAT_TF_EXAMPLE. Got: {example_gen_pb2.PayloadFormat.Name(self._payload_format)}'
+        )
       for record in self._records:
         example = tf.train.Example()
         example.ParseFromString(record)
@@ -269,8 +268,7 @@ class _TFServingRpcRequestBuilder(_BaseRequestBuilder):
       elif signature_def.method_name == tf.saved_model.REGRESS_METHOD_NAME:
         result.extend(self._BuildRegressionRequests(signature_name))
       else:
-        raise ValueError('Unknown method name {}'.format(
-            signature_def.method_name))
+        raise ValueError(f'Unknown method name {signature_def.method_name}')
     return result
 
   def _GetSerializedInputKey(self, signature_def: _SignatureDef):

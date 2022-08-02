@@ -58,7 +58,7 @@ class FunctionParserTest(tf.test.TestCase):
             'unused_e': ArgFormats.PARAMETER,
         })
     self.assertDictEqual(arg_defaults, {})
-    self.assertEqual(returned_values, set(['c']))
+    self.assertEqual(returned_values, {'c'})
 
   def testArtifactFunctionParse(self):
 
@@ -106,9 +106,8 @@ class FunctionParserTest(tf.test.TestCase):
             'num_steps': ArgFormats.PARAMETER,
         })
     self.assertDictEqual(arg_defaults, {})
-    self.assertEqual(
-        returned_values,
-        set(['precision', 'recall', 'message', 'serialized_value']))
+    self.assertEqual(returned_values,
+                     {'precision', 'recall', 'message', 'serialized_value'})
 
   def testEmptyReturnValue(self):
     # No output typehint.

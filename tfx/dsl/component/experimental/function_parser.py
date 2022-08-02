@@ -16,6 +16,7 @@
 Internal use only. No backwards compatibility guarantees.
 """
 
+
 # TODO(ccy): Remove pytype "disable=attribute-error" and "disable=module-attr"
 # overrides after Python 2 support is removed from TFX.
 
@@ -47,7 +48,7 @@ _PRIMITIVE_TO_ARTIFACT = {
 # Map from `Optional[T]` to `T` for primitive types. This map is a simple way
 # to extract the value of `T` from its optional typehint, since the internal
 # fields of the typehint vary depending on the Python version.
-_OPTIONAL_PRIMITIVE_MAP = dict((Optional[t], t) for t in _PRIMITIVE_TO_ARTIFACT)
+_OPTIONAL_PRIMITIVE_MAP = {Optional[t]: t for t in _PRIMITIVE_TO_ARTIFACT}
 
 
 def _validate_signature(
@@ -58,19 +59,19 @@ def _validate_signature(
   """Validates signature of a typehint-annotated component executor function."""
   args, varargs, keywords = argspec.args, argspec.varargs, argspec.varkw
   if varargs or keywords:
-    raise ValueError('%s does not support *args or **kwargs arguments.' %
-                     subject_message)
+    raise ValueError(
+        f'{subject_message} does not support *args or **kwargs arguments.')
 
   # Validate argument type hints.
   for arg in args:
     if isinstance(arg, list):
       # Note: this feature was removed in Python 3:
       # https://www.python.org/dev/peps/pep-3113/.
-      raise ValueError('%s does not support nested input arguments.' %
-                       subject_message)
+      raise ValueError(f'{subject_message} does not support nested input arguments.')
     if arg not in typehints:
-      raise ValueError('%s must have all arguments annotated with typehints.' %
-                       subject_message)
+      raise ValueError(
+          f'{subject_message} must have all arguments annotated with typehints.'
+      )
 
   # Validate return type hints.
   if isinstance(typehints.get('return', None), annotations.OutputDict):
@@ -84,9 +85,7 @@ def _validate_signature(
              '`tfx.types.annotations.OutputArtifact[T]` where T is a '
              'subclass of `tfx.types.Artifact`. They should not be declared '
              'as part of the return value `OutputDict` type hint.') % func)
-  elif 'return' not in typehints or typehints['return'] in (None, type(None)):
-    pass
-  else:
+  elif 'return' in typehints and typehints['return'] not in (None, type(None)):
     raise ValueError(
         ('%s must have either an OutputDict instance or `None` as its return '
          'value typehint.') % subject_message)
@@ -162,23 +161,21 @@ def _parse_signature(
       arg_formats[arg] = ArgFormats.OUTPUT_ARTIFACT
       outputs[arg] = arg_typehint.type
     elif isinstance(arg_typehint, annotations.Parameter):
-      if arg in arg_defaults:
-        if not (arg_defaults[arg] is None or
-                isinstance(arg_defaults[arg], arg_typehint.type)):
-          raise ValueError((
-              'The default value for optional parameter %r on function %r must '
-              'be an instance of its declared type %r or `None` (got %r '
-              'instead)') % (arg, func, arg_typehint.type, arg_defaults[arg]))
+      if (arg in arg_defaults and arg_defaults[arg] is not None
+          and not isinstance(arg_defaults[arg], arg_typehint.type)):
+        raise ValueError((
+            'The default value for optional parameter %r on function %r must '
+            'be an instance of its declared type %r or `None` (got %r '
+            'instead)') % (arg, func, arg_typehint.type, arg_defaults[arg]))
       arg_formats[arg] = ArgFormats.PARAMETER
       parameters[arg] = arg_typehint.type
     elif arg_typehint in _PRIMITIVE_TO_ARTIFACT:
-      if arg in arg_defaults:
-        if not (arg_defaults[arg] is None or
-                isinstance(arg_defaults[arg], arg_typehint)):
-          raise ValueError(
-              ('The default value for optional input value %r on function %r '
-               'must be an instance of its declared type %r or `None` (got %r '
-               'instead)') % (arg, func, arg_typehint, arg_defaults[arg]))
+      if (arg in arg_defaults and arg_defaults[arg] is not None
+          and not isinstance(arg_defaults[arg], arg_typehint)):
+        raise ValueError(
+            ('The default value for optional input value %r on function %r '
+             'must be an instance of its declared type %r or `None` (got %r '
+             'instead)') % (arg, func, arg_typehint, arg_defaults[arg]))
       arg_formats[arg] = ArgFormats.ARTIFACT_VALUE
       inputs[arg] = _PRIMITIVE_TO_ARTIFACT[arg_typehint]
     elif (inspect.isclass(arg_typehint) and
@@ -196,14 +193,13 @@ def _parse_signature(
 
   if 'return' in typehints and typehints['return'] not in (None, type(None)):
     for arg, arg_typehint in typehints['return'].kwargs.items():
-      if arg_typehint in _PRIMITIVE_TO_ARTIFACT:
-        outputs[arg] = _PRIMITIVE_TO_ARTIFACT[arg_typehint]
-        returned_outputs.add(arg)
-      else:
+      if arg_typehint not in _PRIMITIVE_TO_ARTIFACT:
         raise ValueError(
             ('Unknown type hint annotation %r for returned output %r on '
              'function %r') % (arg_typehint, arg, func))
 
+      outputs[arg] = _PRIMITIVE_TO_ARTIFACT[arg_typehint]
+      returned_outputs.add(arg)
   return (inputs, outputs, parameters, arg_formats, arg_defaults,
           returned_outputs)
 

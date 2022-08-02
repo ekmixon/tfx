@@ -96,9 +96,8 @@ class Executor(base_beam_executor.BaseBeamExecutor):
         split_names)
 
     stats_options = options.StatsOptions()
-    stats_options_json = exec_properties.get(
-        standard_component_specs.STATS_OPTIONS_JSON_KEY)
-    if stats_options_json:
+    if stats_options_json := exec_properties.get(
+        standard_component_specs.STATS_OPTIONS_JSON_KEY):
       # TODO(b/150802589): Move jsonable interface to tfx_bsl and use
       # json_utils
       stats_options = options.StatsOptions.from_json(stats_options_json)
@@ -107,12 +106,11 @@ class Executor(base_beam_executor.BaseBeamExecutor):
         raise ValueError('A schema was provided as an input and the '
                          'stats_options exec_property also contains a schema '
                          'value. At most one of these may be set.')
-      else:
-        schema = io_utils.SchemaReader().read(
-            io_utils.get_only_uri_in_dir(
-                artifact_utils.get_single_uri(
-                    input_dict[standard_component_specs.SCHEMA_KEY])))
-        stats_options.schema = schema
+      schema = io_utils.SchemaReader().read(
+          io_utils.get_only_uri_in_dir(
+              artifact_utils.get_single_uri(
+                  input_dict[standard_component_specs.SCHEMA_KEY])))
+      stats_options.schema = schema
 
     split_and_tfxio = []
     tfxio_factory = tfxio_utils.get_tfxio_factory_from_artifact(
@@ -131,12 +129,11 @@ class Executor(base_beam_executor.BaseBeamExecutor):
         output_uri = artifact_utils.get_split_uri(
             output_dict[standard_component_specs.STATISTICS_KEY], split)
         output_path = os.path.join(output_uri, _DEFAULT_FILE_NAME)
-        data = p | 'TFXIORead[%s]' % split >> tfxio.BeamSource()
-        _ = (
-            data
-            | 'GenerateStatistics[%s]' % split >>
-            stats_api.GenerateStatistics(stats_options)
-            | 'WriteStatsOutput[%s]' % split >>
-            stats_api.WriteStatisticsToBinaryFile(output_path))
+        data = p | f'TFXIORead[{split}]' >> tfxio.BeamSource()
+        _ = (data
+             | (f'GenerateStatistics[{split}]' >>
+                stats_api.GenerateStatistics(stats_options))) | (
+                    f'WriteStatsOutput[{split}]' >>
+                    stats_api.WriteStatisticsToBinaryFile(output_path))
         logging.info('Statistics for split %s written to %s.', split,
                      output_uri)

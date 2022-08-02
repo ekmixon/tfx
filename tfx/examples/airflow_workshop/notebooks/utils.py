@@ -40,9 +40,7 @@ def _get_value_str(p):
     return str(p.int_value)
   if p.string_value:
     return p.string_value
-  if p.double_value:
-    return str(p.double_value)
-  return ''
+  return str(p.double_value) if p.double_value else ''
 
 
 class _LineageGraphHelper:
@@ -82,11 +80,10 @@ class _LineageGraphHelper:
     if is_artifact:
       [a] = self.metadata_store.get_artifacts_by_id([node_id])
       [t] = self.metadata_store.get_artifact_types_by_id([a.type_id])
-      node_label += t.name
     else:
       [e] = self.metadata_store.get_executions_by_id([node_id])
       [t] = self.metadata_store.get_execution_types_by_id([e.type_id])
-      node_label += t.name
+    node_label += t.name
     g.nodes[gnode_id]['_label_'] = node_label
 
   def _add_parents(self, g, node_id, is_artifact, depth, max_depth=None):
@@ -154,7 +151,7 @@ class _LineageGraphHelper:
       if node_id > 0 and node_id < label_anchor_id:
         node_color.append('c')
         node_labels[node_id] = abs(node_id)
-      elif node_id > 0 and node_id >= label_anchor_id:
+      elif node_id > 0:
         # artifact label
         node_color.append('w')
         type_name = dag.nodes[node_id - label_anchor_id]['_label_']
@@ -377,9 +374,8 @@ class ReadonlyMetadataStore:
             [artifact.type_id])
         if artifact_type.name == source_type_name:
           return artifact
-        input_artifact = self.get_source_artifact_of_type(
-            artifact.id, source_type_name)
-        if input_artifact:
+        if input_artifact := self.get_source_artifact_of_type(
+            artifact.id, source_type_name):
           return input_artifact
 
   def get_dest_artifact_of_type(self, artifact_id, dest_type_name):
@@ -416,9 +412,8 @@ class ReadonlyMetadataStore:
             [artifact.type_id])
         if artifact_type.name == dest_type_name:
           return artifact
-        dest_artifact = self.get_dest_artifact_of_type(
-            artifact.id, dest_type_name)
-        if dest_artifact:
+        if dest_artifact := self.get_dest_artifact_of_type(artifact.id,
+                                                           dest_type_name):
           return dest_artifact
 
   def get_execution_for_output_artifact(self, artifact_id, type_name):
@@ -466,10 +461,10 @@ class ReadonlyMetadataStore:
 
     # Style the data frames to set captions.
     artifact_df_styler = artifact_df.style.set_caption(
-        'Properties for Artifact {}'.format(artifact_id))
+        f'Properties for Artifact {artifact_id}')
     execution_df_styler = execution_df.style.set_caption(
-        'Properties for Execution {} that generated Artifact {}'.format(
-            execution_id, artifact_id))
+        f'Properties for Execution {execution_id} that generated Artifact {artifact_id}'
+    )
 
     # Display the HTML.
     # pylint: disable=protected-access
@@ -493,8 +488,7 @@ class ReadonlyMetadataStore:
         self.metadata_store.get_artifacts_by_id(
             [artifact_id, other_artifact_id]))
     artifacts_df_styler = df.style.set_caption(
-        'Properties for Artifacts {}, {}'.format(
-            artifact_id, other_artifact_id))
+        f'Properties for Artifacts {artifact_id}, {other_artifact_id}')
 
     # Compare properties of the executions that generated these artifacts.
     execution = self.get_execution_for_output_artifact(
@@ -506,8 +500,8 @@ class ReadonlyMetadataStore:
     executions_df = self.get_df_from_artifacts_or_executions([
         execution, other_execution])
     executions_df_styler = executions_df.style.set_caption(
-        'Properties for Executions that generated Artifacts {}, {}'.format(
-            artifact_id, other_artifact_id))
+        f'Properties for Executions that generated Artifacts {artifact_id}, {other_artifact_id}'
+    )
 
     # Display the HTML.
     # pylint: disable=protected-access

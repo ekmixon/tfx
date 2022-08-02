@@ -95,9 +95,8 @@ class Driver(base_driver.BaseDriver, ir_base_driver.BaseDriver):
     logging.debug('Processing input %s.', input_base)
 
     range_config = None
-    range_config_entry = exec_properties.get(
-        standard_component_specs.RANGE_CONFIG_KEY)
-    if range_config_entry:
+    if range_config_entry := exec_properties.get(
+        standard_component_specs.RANGE_CONFIG_KEY):
       range_config = range_config_pb2.RangeConfig()
       proto_utils.json_to_proto(range_config_entry, range_config)
 

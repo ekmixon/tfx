@@ -34,9 +34,7 @@ def GetValues(inputs: Mapping[str, Sequence[Any]], label: str) -> Sequence[Any]:
   if label not in inputs:
     return []
   values = inputs.get(label)
-  if not isinstance(values, list):
-    return [values]
-  return values
+  return values if isinstance(values, list) else [values]
 
 
 def GetSoleValue(inputs: Mapping[str, Sequence[Any]],
@@ -57,15 +55,12 @@ def GetSoleValue(inputs: Mapping[str, Sequence[Any]],
   """
   values = GetValues(inputs, label)
   if len(values) > 1:
-    raise ValueError(
-        'There should not be more than one value for label {}'.format(label))
+    raise ValueError(f'There should not be more than one value for label {label}')
   if strict:
     if len(values) != 1:
-      raise ValueError(
-          'There should be one and only one value for label {}'.format(label))
-  else:
-    if not values:
-      return None
+      raise ValueError(f'There should be one and only one value for label {label}')
+  elif not values:
+    return None
   return values[0]
 
 

@@ -54,7 +54,7 @@ def _GeneratePartitionKey(record: Union[tf.train.Example,
   # Use a feature for partitioning the examples.
   feature_name = split_config.partition_feature_name
   if feature_name not in features:
-    raise RuntimeError('Feature name `{}` does not exist.'.format(feature_name))
+    raise RuntimeError(f'Feature name `{feature_name}` does not exist.')
   feature = features[feature_name]
   if not feature.HasField('kind'):
     raise RuntimeError('Partition feature does not contain any value.')
@@ -202,17 +202,14 @@ class BaseExampleGenExecutor(base_beam_executor.BaseBeamExecutor, abc.ABC):
     else:
       # Use input splits.
       for split in input_config.splits:
-        examples = (
-            pipeline
-            | 'InputToRecord[{}]'.format(split.name) >>
-            # pylint: disable=no-value-for-parameter
-            input_to_record(exec_properties, split.pattern))
+        examples = pipeline | (f'InputToRecord[{split.name}]' >> input_to_record(
+            exec_properties, split.pattern))
         example_splits.append(examples)
 
-    result = {}
-    for index, example_split in enumerate(example_splits):
-      result[split_names[index]] = example_split
-    return result
+    return {
+        split_names[index]: example_split
+        for index, example_split in enumerate(example_splits)
+    }
 
   def Do(
       self,
@@ -276,15 +273,17 @@ class BaseExampleGenExecutor(base_beam_executor.BaseBeamExecutor, abc.ABC):
       # pylint: disable=expression-not-assigned, no-value-for-parameter
       for split_name, example_split in example_splits.items():
         (example_split
-         | 'WriteSplit[{}]'.format(split_name) >> write_split.WriteSplit(
+         | (f'WriteSplit[{split_name}]' >> write_split.WriteSplit(
              artifact_utils.get_split_uri(
                  output_dict[standard_component_specs.EXAMPLES_KEY],
-                 split_name), output_file_format))
-      # pylint: enable=expression-not-assigned, no-value-for-parameter
+                 split_name,
+             ),
+             output_file_format,
+         )))
+        # pylint: enable=expression-not-assigned, no-value-for-parameter
 
-    output_payload_format = exec_properties.get(
-        standard_component_specs.OUTPUT_DATA_FORMAT_KEY)
-    if output_payload_format:
+    if output_payload_format := exec_properties.get(
+        standard_component_specs.OUTPUT_DATA_FORMAT_KEY):
       for output_examples_artifact in output_dict[
           standard_component_specs.EXAMPLES_KEY]:
         examples_utils.set_payload_format(output_examples_artifact,

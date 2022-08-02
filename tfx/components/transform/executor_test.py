@@ -40,11 +40,10 @@ def _get_dataset_size(files):
     return sum(
         1 for _ in tf.data.TFRecordDataset(files, compression_type='GZIP'))
   else:
-    result = 0
-    for file in files:
-      result += sum(1 for _ in tf.compat.v1.io.tf_record_iterator(
-          file, tf.io.TFRecordOptions(compression_type='GZIP')))
-    return result
+    return sum(
+        sum(1 for _ in tf.compat.v1.io.tf_record_iterator(
+            file, tf.io.TFRecordOptions(compression_type='GZIP')))
+        for file in files)
 
 
 class _TempPath(types.Artifact):
@@ -78,7 +77,7 @@ class ExecutorTest(tft_unit.TransformTestCase):
     artifact2_files = fileio.glob(artifact2_pattern)
     for filepath in artifact2_files:
       directory, filename = os.path.split(filepath)
-      io_utils.copy_file(filepath, os.path.join(directory, 'dup_' + filename))
+      io_utils.copy_file(filepath, os.path.join(directory, f'dup_{filename}'))
 
   def _get_output_data_dir(self, sub_dir=None):
     test_dir = self._testMethodName
@@ -180,12 +179,8 @@ class ExecutorTest(tft_unit.TransformTestCase):
     # Create exec properties skeleton.
     self._module_file = os.path.join(self._SOURCE_DATA_DIR,
                                      'module_file/transform_module.py')
-    self._preprocessing_fn = '%s.%s' % (
-        transform_module.preprocessing_fn.__module__,
-        transform_module.preprocessing_fn.__name__)
-    self._stats_options_updater_fn = '%s.%s' % (
-        transform_module.stats_options_updater_fn.__module__,
-        transform_module.stats_options_updater_fn.__name__)
+    self._preprocessing_fn = f'{transform_module.preprocessing_fn.__module__}.{transform_module.preprocessing_fn.__name__}'
+    self._stats_options_updater_fn = f'{transform_module.stats_options_updater_fn.__module__}.{transform_module.stats_options_updater_fn.__name__}'
     self._exec_properties[standard_component_specs.SPLITS_CONFIG_KEY] = None
     self._exec_properties[
         standard_component_specs.FORCE_TF_COMPAT_V1_KEY] = int(
@@ -382,9 +377,8 @@ class ExecutorTest(tft_unit.TransformTestCase):
 
   def test_do_with_preprocessing_fn_custom_config(self):
     self._exec_properties[
-        standard_component_specs.PREPROCESSING_FN_KEY] = '%s.%s' % (
-            transform_module.preprocessing_fn.__module__,
-            transform_module.preprocessing_fn.__name__)
+        standard_component_specs.
+        PREPROCESSING_FN_KEY] = f'{transform_module.preprocessing_fn.__module__}.{transform_module.preprocessing_fn.__name__}'
     self._exec_properties[
         standard_component_specs.CUSTOM_CONFIG_KEY] = json.dumps({
             'VOCAB_SIZE': 1000,
@@ -396,9 +390,8 @@ class ExecutorTest(tft_unit.TransformTestCase):
 
   def test_do_with_preprocessing_fn_and_none_custom_config(self):
     self._exec_properties[
-        standard_component_specs.PREPROCESSING_FN_KEY] = '%s.%s' % (
-            transform_module.preprocessing_fn.__module__,
-            transform_module.preprocessing_fn.__name__)
+        standard_component_specs.
+        PREPROCESSING_FN_KEY] = f'{transform_module.preprocessing_fn.__module__}.{transform_module.preprocessing_fn.__name__}'
     self._exec_properties['custom_config'] = json.dumps(None)
     self._transform_executor.Do(self._input_dict, self._output_dict,
                                 self._exec_properties)

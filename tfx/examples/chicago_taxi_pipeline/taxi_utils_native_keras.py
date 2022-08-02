@@ -63,7 +63,7 @@ _FARE_KEY = 'fare'
 
 
 def _transformed_name(key):
-  return key + '_xf'
+  return f'{key}_xf'
 
 
 def _transformed_names(keys):
@@ -201,12 +201,12 @@ def _build_keras_model(hidden_units: List[int] = None) -> tf.keras.Model:
       for categorical_column in categorical_columns
   ]
 
-  model = _wide_and_deep_classifier(
+  return _wide_and_deep_classifier(
       # TODO(b/139668410) replace with premade wide_and_deep keras model
       wide_columns=indicator_column,
       deep_columns=real_valued_columns,
-      dnn_hidden_units=hidden_units or [100, 70, 50, 25])
-  return model
+      dnn_hidden_units=hidden_units or [100, 70, 50, 25],
+  )
 
 
 def _wide_and_deep_classifier(wide_columns, deep_columns, dnn_hidden_units):
@@ -221,28 +221,27 @@ def _wide_and_deep_classifier(wide_columns, deep_columns, dnn_hidden_units):
   Returns:
     A Wide and Deep Keras model
   """
-  # Following values are hard coded for simplicity in this example,
-  # However prefarably they should be passsed in as hparams.
-
-  # Keras needs the feature definitions at compile time.
-  # TODO(b/139081439): Automate generation of input layers from FeatureColumn.
-  input_layers = {
-      colname: tf.keras.layers.Input(name=colname, shape=(), dtype=tf.float32)
-      for colname in _transformed_names(_DENSE_FLOAT_FEATURE_KEYS)
-  }
-  input_layers.update({
-      colname: tf.keras.layers.Input(name=colname, shape=(), dtype='int32')
-      for colname in _transformed_names(_VOCAB_FEATURE_KEYS)
-  })
-  input_layers.update({
-      colname: tf.keras.layers.Input(name=colname, shape=(), dtype='int32')
-      for colname in _transformed_names(_BUCKET_FEATURE_KEYS)
-  })
-  input_layers.update({
-      colname: tf.keras.layers.Input(name=colname, shape=(), dtype='int32')
-      for colname in _transformed_names(_CATEGORICAL_FEATURE_KEYS)
-  })
-
+  input_layers = (
+      {
+          colname: tf.keras.layers.Input(
+              name=colname, shape=(), dtype=tf.float32)
+          for colname in _transformed_names(_DENSE_FLOAT_FEATURE_KEYS)
+      }
+      | {
+          colname: tf.keras.layers.Input(
+              name=colname, shape=(), dtype='int32')
+          for colname in _transformed_names(_VOCAB_FEATURE_KEYS)
+      }
+      | {
+          colname: tf.keras.layers.Input(
+              name=colname, shape=(), dtype='int32')
+          for colname in _transformed_names(_BUCKET_FEATURE_KEYS)
+      }
+      | {
+          colname: tf.keras.layers.Input(
+              name=colname, shape=(), dtype='int32')
+          for colname in _transformed_names(_CATEGORICAL_FEATURE_KEYS)
+      })
   # TODO(b/161952382): Replace with Keras premade models and
   # Keras preprocessing layers.
   deep = tf.keras.layers.DenseFeatures(deep_columns)(input_layers)
@@ -274,12 +273,11 @@ def preprocessing_fn(inputs):
   Returns:
     Map from string feature key to transformed feature operations.
   """
-  outputs = {}
-  for key in _DENSE_FLOAT_FEATURE_KEYS:
-    # Preserve this feature as a dense float, setting nan's to the mean.
-    outputs[_transformed_name(key)] = tft.scale_to_z_score(
-        _fill_in_missing(inputs[key]))
-
+  outputs = {
+      _transformed_name(key): tft.scale_to_z_score(
+          _fill_in_missing(inputs[key]))
+      for key in _DENSE_FLOAT_FEATURE_KEYS
+  }
   for key in _VOCAB_FEATURE_KEYS:
     # Build a vocabulary for this feature.
     outputs[_transformed_name(key)] = tft.compute_and_apply_vocabulary(

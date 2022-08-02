@@ -98,7 +98,7 @@ class RewritingExporter(tf.estimator.Exporter):
     if not base_path:
       return None
 
-    tmp_rewrite_folder = 'tmp-rewrite-' + str(int(time.time()))
+    tmp_rewrite_folder = f'tmp-rewrite-{int(time.time())}'
     tmp_rewrite_path = os.path.join(export_path, tmp_rewrite_folder)
     if fileio.exists(tmp_rewrite_path):
       raise RuntimeError('Unable to create a unique temporary rewrite path.')

@@ -63,8 +63,8 @@ def _get_container_or_error(
     if container.name == container_name:
       return container
   raise ValueError(
-      'Unable to find {} container from the pod (found {}).'.format(
-          container_name, [c.name for c in pod.spec.containers]))
+      f'Unable to find {container_name} container from the pod (found {[c.name for c in pod.spec.containers]}).'
+  )
 
 
 def _api_exception_retry_filter(exception: Exception):
@@ -76,18 +76,16 @@ def _convert_to_kube_env(
   """Convert infra_validator_pb2.EnvVar to kubernetes.V1EnvVar."""
   if not env.name:
     raise ValueError('EnvVar.name must be specified.')
-  if env.HasField('value_from'):
-    if env.value_from.HasField('secret_key_ref'):
-      value_source = k8s_client.V1EnvVarSource(
-          secret_key_ref=k8s_client.V1SecretKeySelector(
-              name=env.value_from.secret_key_ref.name,
-              key=env.value_from.secret_key_ref.key))
-      return k8s_client.V1EnvVar(name=env.name, value_from=value_source)
-    else:
-      raise ValueError(f'Bad EnvVar: {env}')
-  else:
+  if not env.HasField('value_from'):
     # Note that env.value can be empty.
     return k8s_client.V1EnvVar(name=env.name, value=env.value)
+  if not env.value_from.HasField('secret_key_ref'):
+    raise ValueError(f'Bad EnvVar: {env}')
+  value_source = k8s_client.V1EnvVarSource(
+      secret_key_ref=k8s_client.V1SecretKeySelector(
+          name=env.value_from.secret_key_ref.name,
+          key=env.value_from.secret_key_ref.key))
+  return k8s_client.V1EnvVar(name=env.name, value_from=value_source)
 
 
 class KubernetesRunner(base_runner.BaseModelServerRunner):
@@ -173,12 +171,10 @@ class KubernetesRunner(base_runner.BaseModelServerRunner):
       # confirm the phase.
       pod_phase = _PodPhase(pod.status.phase)
       if pod_phase == _PodPhase.RUNNING and pod.status.pod_ip:
-        self._endpoint = '{}:{}'.format(pod.status.pod_ip,
-                                        self._serving_binary.container_port)
+        self._endpoint = f'{pod.status.pod_ip}:{self._serving_binary.container_port}'
         return
       if pod_phase.is_done:
-        raise error_types.JobAborted(
-            'Job has been aborted. (phase={})'.format(pod_phase))
+        raise error_types.JobAborted(f'Job has been aborted. (phase={pod_phase})')
       logging.info('Waiting for the pod to be running. (phase=%s)', pod_phase)
       time.sleep(_DEFAULT_POLLING_INTERVAL_SEC)
 
@@ -210,11 +206,10 @@ class KubernetesRunner(base_runner.BaseModelServerRunner):
           name=self._pod_name,
           namespace=self._namespace)
     except rest.ApiException as e:
-      if e.status == 404:  # Pod is already deleted.
-        logging.info('Pod (name=%s) does not exist.', self._pod_name)
-        return
-      else:
+      if e.status != 404:
         raise
+      logging.info('Pod (name=%s) does not exist.', self._pod_name)
+      return
 
   def _BuildPodManifest(self) -> k8s_client.V1Pod:
     annotations = {}
@@ -230,7 +225,7 @@ class KubernetesRunner(base_runner.BaseModelServerRunner):
     if self._config.serving_pod_overrides:
       overrides = self._config.serving_pod_overrides
       if overrides.annotations:
-        annotations.update(overrides.annotations)
+        annotations |= overrides.annotations
       if overrides.env:
         env_vars.extend(_convert_to_kube_env(env) for env in overrides.env)
 
@@ -289,12 +284,11 @@ class KubernetesRunner(base_runner.BaseModelServerRunner):
     return result
 
   def _FindVolumeMountForPath(self, path) -> Optional[k8s_client.V1VolumeMount]:
-    if not os.path.exists(path):
-      return None
-    for mount in self._executor_container.volume_mounts:
-      if _is_subdirectory(mount.mount_path, self._model_path):
-        return mount
-    return None
+    return (next(
+        (mount for mount in self._executor_container.volume_mounts
+         if _is_subdirectory(mount.mount_path, self._model_path)),
+        None,
+    ) if os.path.exists(path) else None)
 
   def _SetupModelVolumeIfNeeded(self, pod_manifest: k8s_client.V1Pod):
     mount = self._FindVolumeMountForPath(self._model_path)

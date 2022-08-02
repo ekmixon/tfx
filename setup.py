@@ -165,8 +165,9 @@ class _GenProtoCommand(setuptools.Command):
       # remote repository with the local path. This is required to use the
       # local developmental version of MLMD during tests.
       # https://docs.bazel.build/versions/master/command-line-reference.html
-      bazel_args.append('--override_repository={}={}'.format(
-          'com_github_google_ml_metadata', self.local_mlmd_repo))
+      bazel_args.append(
+          f'--override_repository=com_github_google_ml_metadata={self.local_mlmd_repo}'
+      )
     cmd = [self._bazel_cmd, 'run', *bazel_args, '//build:gen_proto']
     print('Running Bazel command', cmd, file=sys.stderr)
     subprocess.check_call(
@@ -297,8 +298,8 @@ elif package_config.PACKAGE_NAME == 'tfx':
   # Recommended installation package for TFX. This package builds on top of
   # the "ml-pipelines-sdk" pipeline authoring SDK package and adds first-party
   # TFX components and additional functionality.
-  install_requires = (['ml-pipelines-sdk==%s' % version.__version__] +
-                      dependencies.make_required_install_packages())
+  install_requires = [f'ml-pipelines-sdk=={version.__version__}'
+                      ] + dependencies.make_required_install_packages()
   extras_require = tfx_extras_requires
   description = _TFX_DESCRIPTION
   long_description = _TFX_LONG_DESCRIPTION

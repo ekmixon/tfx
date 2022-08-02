@@ -83,8 +83,8 @@ def _prepare_artifact(
     An Artifact object representing the imported artifact.
   """
   absl.logging.info(
-      'Processing source uri: %s, properties: %s, custom_properties: %s' %
-      (uri, properties, custom_properties))
+      f'Processing source uri: {uri}, properties: {properties}, custom_properties: {custom_properties}'
+  )
 
   # Check types of custom properties.
   for key, value in custom_properties.items():
@@ -99,22 +99,20 @@ def _prepare_artifact(
   # of the imported artifact match those of the existing artifact.
   previous_artifacts = []
   for candidate_mlmd_artifact in unfiltered_previous_artifacts:
-    is_candidate = True
     candidate_artifact = output_artifact_class(mlmd_artifact_type)
     candidate_artifact.set_mlmd_artifact(candidate_mlmd_artifact)
-    for key, value in properties.items():
-      if getattr(candidate_artifact, key) != value:
+    is_candidate = next(
+        (False for key, value in properties.items()
+         if getattr(candidate_artifact, key) != value),
+        True,
+    )
+    for key, value in custom_properties.items():
+      if (isinstance(value, int)
+          and candidate_artifact.get_int_custom_property(key) != value
+          or not isinstance(value, int) and isinstance(value, (str, bytes))
+          and candidate_artifact.get_string_custom_property(key) != value):
         is_candidate = False
         break
-    for key, value in custom_properties.items():
-      if isinstance(value, int):
-        if candidate_artifact.get_int_custom_property(key) != value:
-          is_candidate = False
-          break
-      elif isinstance(value, (str, bytes)):
-        if candidate_artifact.get_string_custom_property(key) != value:
-          is_candidate = False
-          break
     if is_candidate:
       previous_artifacts.append(candidate_mlmd_artifact)
 

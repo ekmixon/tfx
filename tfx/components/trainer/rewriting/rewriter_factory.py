@@ -62,7 +62,7 @@ class _RewriterFactory:
     for subcls in rewriter.BaseRewriter.__subclasses__():
       if subcls.__name__.lower() == rewriter_type:
         return subcls
-    raise ValueError('Failed to find rewriter: {}'.format(rewriter_type))
+    raise ValueError(f'Failed to find rewriter: {rewriter_type}')
 
 
 def create_rewriter(rewriter_type: str, *args,

@@ -48,13 +48,12 @@ class LatestBlessedModelStrategy(resolver.ResolverStrategy):
     all_model_blessings = input_dict[model_blessing_channel_key]
 
     # Makes a dict of {model_id : ModelBlessing artifact} for blessed models.
-    all_blessed_model_ids = dict(
-        (  # pylint: disable=g-complex-comprehension
-            a.get_int_custom_property(
-                evaluator.ARTIFACT_PROPERTY_CURRENT_MODEL_ID_KEY), a)
-        for a in all_model_blessings
-        if a.get_int_custom_property(
-            evaluator.ARTIFACT_PROPERTY_BLESSED_KEY) == 1)
+    all_blessed_model_ids = {
+        a.get_int_custom_property(
+            evaluator.ARTIFACT_PROPERTY_CURRENT_MODEL_ID_KEY): a
+        for a in all_model_blessings if a.get_int_custom_property(
+            evaluator.ARTIFACT_PROPERTY_BLESSED_KEY) == 1
+    }
 
     result = {model_channel_key: [], model_blessing_channel_key: []}
     # Iterates all models, if blessed, set as result. As the model list was
@@ -100,8 +99,8 @@ class LatestBlessedModelStrategy(resolver.ResolverStrategy):
       elif issubclass(type(artifact), standard_artifacts.ModelBlessing):
         model_blessing_channel_key = k
       else:
-        raise RuntimeError('Only expecting Model or ModelBlessing, got %s' %
-                           artifact.TYPE_NAME)
+        raise RuntimeError(
+            f'Only expecting Model or ModelBlessing, got {artifact.TYPE_NAME}')
     assert model_channel_key is not None, 'Expecting Model as input'
     assert model_blessing_channel_key is not None, ('Expecting ModelBlessing as'
                                                     ' input')

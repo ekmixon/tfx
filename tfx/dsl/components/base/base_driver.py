@@ -41,7 +41,7 @@ def _generate_output_uri(base_output_dir: str,
 def _prepare_output_paths(artifact: types.Artifact):
   """Create output directories for output artifact."""
   if fileio.exists(artifact.uri):
-    msg = 'Output artifact uri %s already exists' % artifact.uri
+    msg = f'Output artifact uri {artifact.uri} already exists'
     absl.logging.warning(msg)
     # TODO(b/158689199): We currently simply return as a short-term workaround
     # to unblock execution retires. A comprehensive solution to guarantee
@@ -88,9 +88,9 @@ class BaseDriver:
     for single_artifacts_list in artifacts_dict.values():
       for artifact in single_artifacts_list:
         if not artifact.uri:
-          raise RuntimeError('Artifact %s does not have uri' % artifact)
+          raise RuntimeError(f'Artifact {artifact} does not have uri')
         if not fileio.exists(artifact.uri):
-          raise RuntimeError('Artifact uri %s is missing' % artifact.uri)
+          raise RuntimeError(f'Artifact uri {artifact.uri} is missing')
 
   def _log_properties(self, input_dict: Dict[str, List[types.Artifact]],
                       output_dict: Dict[str, List[types.Artifact]],
@@ -150,7 +150,7 @@ class BaseDriver:
                   'components must first be run with '
                   '`interactive_context.run(component)` before their outputs can '
                   'be used in downstream components.') % (artifact, name))
-            artifacts_by_id.update({a.id: a for a in artifacts})
+            artifacts_by_id |= {a.id: a for a in artifacts}
         else:
           artifacts = self._metadata_handler.search_artifacts(
               artifact_name=input_channel.output_key,

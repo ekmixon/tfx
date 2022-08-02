@@ -31,19 +31,20 @@ def _TestInputSourceToExamplePTransform(pipeline, exec_properties,
                                         split_pattern):
   mock_examples = []
   size = 0
-  if split_pattern == 'single/*':
+  if split_pattern == 'eval/*':
+    size = 2000
+  elif split_pattern == 'single/*':
     size = 6000
   elif split_pattern == 'train/*':
     size = 4000
-  elif split_pattern == 'eval/*':
-    size = 2000
   assert size != 0
   has_empty = exec_properties.get('has_empty', True)
   for i in range(size):
-    feature = {}
-    feature['i'] = tf.train.Feature(
-    ) if i % 10 == 0 and has_empty else tf.train.Feature(
-        int64_list=tf.train.Int64List(value=[i]))
+    feature = {
+        'i':
+        tf.train.Feature() if i % 10 == 0 and has_empty else tf.train.Feature(
+            int64_list=tf.train.Int64List(value=[i]))
+    }
     feature['f'] = tf.train.Feature(
     ) if i % 10 == 0 and has_empty else tf.train.Feature(
         float_list=tf.train.FloatList(value=[float(i)]))
@@ -52,8 +53,7 @@ def _TestInputSourceToExamplePTransform(pipeline, exec_properties,
         bytes_list=tf.train.BytesList(value=[tf.compat.as_bytes(str(i))]))
 
     if exec_properties.get('sequence_example', False):
-      feature_list = {}
-      feature_list['list'] = tf.train.FeatureList(feature=[feature['s']])
+      feature_list = {'list': tf.train.FeatureList(feature=[feature['s']])}
       example_proto = tf.train.SequenceExample(
           context=tf.train.Features(feature=feature),
           feature_lists=tf.train.FeatureLists(feature_list=feature_list))

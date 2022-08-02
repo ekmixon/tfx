@@ -159,8 +159,7 @@ class TFLiteRewriter(rewriter.BaseRewriter):
     # not contain an assets or assets.extra directory. Remove this when the
     # TFLite converter can convert models having these directories.
     tmp_model_dir = os.path.join(
-        _ensure_str(rewritten_model.path),
-        'tmp-rewrite-' + str(int(time.time())))
+        _ensure_str(rewritten_model.path), f'tmp-rewrite-{int(time.time())}')
     if fileio.exists(tmp_model_dir):
       raise ValueError('TFLiteConverter is unable to create a unique path '
                        'for the temp rewriting directory.')

@@ -48,8 +48,7 @@ class _ReadPrestoDoFn(beam.DoFn):
       contains information on column name, column data type, data.
     """
     self.cursor.execute(query)
-    rows = self.cursor.fetchall()
-    if rows:
+    if rows := self.cursor.fetchall():
       cols = []
       col_types = []
       # Returns a list of (column_name, column_type, None, ...)
@@ -148,8 +147,7 @@ def _row_to_example(
     else:
       # TODO(b/140266796): support more types
       # https://prestodb.github.io/docs/current/language/types
-      raise RuntimeError(
-          'Presto column type {} is not supported.'.format(data_type))
+      raise RuntimeError(f'Presto column type {data_type} is not supported.')
   return tf.train.Example(features=tf.train.Features(feature=feature))
 
 

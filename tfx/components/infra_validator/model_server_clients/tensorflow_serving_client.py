@@ -100,5 +100,4 @@ class TensorFlowServingClient(base_client.BaseModelServerClient):
     elif isinstance(request, predict_pb2.PredictRequest):
       self._prediction_service.Predict(request)
     else:
-      raise NotImplementedError('Unsupported request type {}'.format(
-          type(request).__name__))
+      raise NotImplementedError(f'Unsupported request type {type(request).__name__}')

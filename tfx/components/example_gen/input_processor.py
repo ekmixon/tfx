@@ -144,8 +144,8 @@ class FileBasedInputProcessor(InputProcessor):
       elif (self._is_match_span != is_match_span or
             self._is_match_date != is_match_date or
             self._is_match_version != is_match_version):
-        raise ValueError('Spec setup should the same for all splits: %s.' %
-                         split.pattern)
+        raise ValueError(
+            f'Spec setup should the same for all splits: {split.pattern}.')
 
     if (self._is_match_span or self._is_match_date) and not range_config:
       range_config = range_config_pb2.RangeConfig(
@@ -160,9 +160,7 @@ class FileBasedInputProcessor(InputProcessor):
 
   def resolve_span_and_version(self) -> Tuple[int, Optional[int]]:
     # TODO(b/181275944): refactor to use base resolve_span_and_version.
-    splits = []
-    for split in self._splits:
-      splits.append(copy.deepcopy(split))
+    splits = [copy.deepcopy(split) for split in self._splits]
     self._fingerprint, span, version = utils.calculate_splits_fingerprint_span_and_version(
         self._input_base_uri, splits, self._range_config)
     return span, version

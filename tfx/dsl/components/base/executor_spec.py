@@ -46,8 +46,9 @@ class ExecutorSpec(json_utils.Jsonable):
     """
     # TODO(b/158712976, b/161286496): Serialize executor specs for different
     # platforms.
-    raise NotImplementedError('{}.{} does not support encoding into IR.'.format(
-        self.__module__, self.__class__.__name__))
+    raise NotImplementedError(
+        f'{self.__module__}.{self.__class__.__name__} does not support encoding into IR.'
+    )
 
   def copy(self) -> 'ExecutorSpec':
     """Makes a copy of the ExecutorSpec.
@@ -101,8 +102,7 @@ class ExecutorClassSpec(ExecutorSpec):
     Returns:
       Fully qualified class name for the executor class.
     """
-    return '{}.{}'.format(self.executor_class.__module__,
-                          self.executor_class.__name__)
+    return f'{self.executor_class.__module__}.{self.executor_class.__name__}'
 
   @staticmethod
   def _reconstruct_from_executor_class_path(executor_class_path):

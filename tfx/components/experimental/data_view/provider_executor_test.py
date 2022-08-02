@@ -60,10 +60,10 @@ class DataViewProviderExecutorTest(tf.test.TestCase):
     output.uri = os.path.join(self._output_data_dir, 'output_data_view')
     output_dict = {'data_view': [output]}
     exec_properties = {
-        'module_file': None,
+        'module_file':
+        None,
         'create_decoder_func':
-            '%s.%s' % (data_view_module.create_simple_decoder.__module__,
-                       data_view_module.create_simple_decoder.__name__),
+        f'{data_view_module.create_simple_decoder.__module__}.{data_view_module.create_simple_decoder.__name__}',
     }
     executor = provider_executor.TfGraphDataViewProviderExecutor()
     executor.Do(input_dict, output_dict, exec_properties)

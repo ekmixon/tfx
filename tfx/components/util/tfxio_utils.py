@@ -64,12 +64,12 @@ def resolve_payload_format_and_data_view_uri(
     # Only FORMAT_PROTO may have DataView attached.
     return payload_format, None
 
-  data_view_infos = []
-  for examples_artifact in examples:
-    data_view_infos.append(_get_data_view_info(examples_artifact))
+  data_view_infos = [
+      _get_data_view_info(examples_artifact) for examples_artifact in examples
+  ]
   # All the artifacts do not have DataView attached -- this is allowed. The
   # caller may be requesting to read the data as raw string records.
-  if all([i is None for i in data_view_infos]):
+  if all(i is None for i in data_view_infos):
     return payload_format, None
 
   # All the artifacts have a DataView attached -- resolve to the latest
@@ -80,15 +80,14 @@ def resolve_payload_format_and_data_view_uri(
   # is a struct2tensor query, so such guarantee is provided by protobuf
   # (as long as the user follows the basic principles of making changes to
   # the proto).
-  if all([i is not None for i in data_view_infos]):
+  if all(i is not None for i in data_view_infos):
     return payload_format, max(data_view_infos, key=lambda pair: pair[1])[0]
 
   violating_artifacts = [
       e for e, i in zip(examples, data_view_infos) if i is None]
   raise ValueError(
-      'Unable to resolve a DataView for the Examples Artifacts '
-      'provided -- some Artifacts did not have DataView attached: {}'
-      .format(violating_artifacts))
+      f'Unable to resolve a DataView for the Examples Artifacts provided -- some Artifacts did not have DataView attached: {violating_artifacts}'
+  )
 
 
 def get_tfxio_factory_from_artifact(
@@ -290,12 +289,10 @@ def make_tfxio(
         raise ValueError(
             f'The length of file_pattern and file_formats should be the same.'
             f'Given: file_pattern={file_pattern}, file_format={file_format}')
-      else:
-        if any(item != 'tfrecords_gzip' for item in file_format):
-          raise NotImplementedError(f'{file_format} is not supported yet.')
-    else:  # file_format is str type.
-      if file_format != 'tfrecords_gzip':
+      if any(item != 'tfrecords_gzip' for item in file_format):
         raise NotImplementedError(f'{file_format} is not supported yet.')
+    elif file_format != 'tfrecords_gzip':
+      raise NotImplementedError(f'{file_format} is not supported yet.')
 
   if read_as_raw_records:
     assert raw_record_column_name is not None, (
@@ -330,16 +327,15 @@ def make_tfxio(
         telemetry_descriptors=telemetry_descriptors,
         raw_record_column_name=raw_record_column_name)
 
-  raise NotImplementedError(
-      'Unsupport payload format: {}'.format(payload_format))
+  raise NotImplementedError(f'Unsupport payload format: {payload_format}')
 
 
 def _get_payload_format(examples: List[artifact.Artifact]) -> int:
-  payload_formats = set(
-      [examples_utils.get_payload_format(e) for e in examples])
+  payload_formats = {examples_utils.get_payload_format(e) for e in examples}
   if len(payload_formats) != 1:
-    raise ValueError('Unable to read example artifacts of different payload '
-                     'formats: {}'.format(payload_formats))
+    raise ValueError(
+        f'Unable to read example artifacts of different payload formats: {payload_formats}'
+    )
   return payload_formats.pop()
 
 
@@ -350,9 +346,8 @@ def _get_data_view_info(
       'examples must be of type standard_artifacts.Examples')
   payload_format = examples_utils.get_payload_format(examples)
   if payload_format == example_gen_pb2.PayloadFormat.FORMAT_PROTO:
-    data_view_uri = examples.get_string_custom_property(
-        constants.DATA_VIEW_URI_PROPERTY_KEY)
-    if data_view_uri:
+    if data_view_uri := examples.get_string_custom_property(
+        constants.DATA_VIEW_URI_PROPERTY_KEY):
       assert examples.has_custom_property(constants.DATA_VIEW_CREATE_TIME_KEY)
       # The creation time could be an int or str. Legacy artifacts will contain
       # an int custom property.

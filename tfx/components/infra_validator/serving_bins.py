@@ -28,22 +28,23 @@ from tfx.utils.model_paths import tf_serving_flavor
 def parse_serving_binaries(  # pylint: disable=invalid-name
     serving_spec: infra_validator_pb2.ServingSpec) -> List['ServingBinary']:
   """Parse `ServingBinary`s from `ServingSpec`."""
-  result = []
   serving_binary = serving_spec.WhichOneof('serving_binary')
-  if serving_binary == 'tensorflow_serving':
-    config = serving_spec.tensorflow_serving
-    image_name = config.image_name or None
-    for tag in config.tags:
-      result.append(TensorFlowServing(image_name=image_name,
-                                      model_name=serving_spec.model_name,
-                                      tag=tag))
-    for digest in config.digests:
-      result.append(TensorFlowServing(image_name=image_name,
-                                      model_name=serving_spec.model_name,
-                                      digest=digest))
-    return result
-  else:
-    raise ValueError('Invalid serving_binary {}'.format(serving_binary))
+  if serving_binary != 'tensorflow_serving':
+    raise ValueError(f'Invalid serving_binary {serving_binary}')
+  config = serving_spec.tensorflow_serving
+  image_name = config.image_name or None
+  result = [
+      TensorFlowServing(
+          image_name=image_name, model_name=serving_spec.model_name, tag=tag)
+      for tag in config.tags
+  ]
+  result.extend(
+      TensorFlowServing(
+          image_name=image_name,
+          model_name=serving_spec.model_name,
+          digest=digest,
+      ) for digest in config.digests)
+  return result
 
 
 class ServingBinary(abc.ABC):
@@ -55,8 +56,7 @@ class ServingBinary(abc.ABC):
 
     Only applies to docker compatible serving binaries.
     """
-    raise NotImplementedError('{} is not docker compatible.'.format(
-        type(self).__name__))
+    raise NotImplementedError(f'{type(self).__name__} is not docker compatible.')
 
   @abc.abstractproperty
   def image(self) -> str:
@@ -64,8 +64,7 @@ class ServingBinary(abc.ABC):
 
     Only applies to docker compatible serving binaries.
     """
-    raise NotImplementedError('{} is not docker compatible.'.format(
-        type(self).__name__))
+    raise NotImplementedError(f'{type(self).__name__} is not docker compatible.')
 
   @abc.abstractmethod
   def MakeEnvVars(self, *args: Any) -> Dict[str, str]:
@@ -79,8 +78,7 @@ class ServingBinary(abc.ABC):
     Returns:
       A dictionary of environment variables inside container.
     """
-    raise NotImplementedError('{} is not docker compatible.'.format(
-        type(self).__name__))
+    raise NotImplementedError(f'{type(self).__name__} is not docker compatible.')
 
   @abc.abstractmethod
   def MakeDockerRunParams(self, *args: Any) -> Dict[str, str]:
@@ -94,14 +92,13 @@ class ServingBinary(abc.ABC):
     Returns:
       A dictionary of docker run parameters.
     """
-    raise NotImplementedError('{} is not docker compatible.'.format(
-        type(self).__name__))
+    raise NotImplementedError(f'{type(self).__name__} is not docker compatible.')
 
   @abc.abstractmethod
   def MakeClient(self, endpoint: str) -> base_client.BaseModelServerClient:
     """Create a model server client of this serving binary."""
-    raise NotImplementedError('{} does not implement MakeClient.'.format(
-        type(self).__name__))
+    raise NotImplementedError(
+        f'{type(self).__name__} does not implement MakeClient.')
 
 
 class TensorFlowServing(ServingBinary):
@@ -133,9 +130,9 @@ class TensorFlowServing(ServingBinary):
       raise ValueError('Exactly one of `tag` or `digest` should be used.')
     image_name = image_name or self._DEFAULT_IMAGE_NAME
     if tag is not None:
-      self._image = '{}:{}'.format(image_name, tag)
+      self._image = f'{image_name}:{tag}'
     else:
-      self._image = '{}@{}'.format(image_name, digest)
+      self._image = f'{image_name}@{digest}'
 
   @property
   def container_port(self) -> int:
@@ -174,7 +171,7 @@ class TensorFlowServing(ServingBinary):
       # model_path should be a local directory. In order to make TF Serving see
       # the host model path, we need to mount model path volume to the
       # container.
-      assert os.path.isdir(model_path), '{} does not exist'.format(model_path)
+      assert os.path.isdir(model_path), f'{model_path} does not exist'
       container_model_path = tf_serving_flavor.make_model_path(
           model_base_path=self._DEFAULT_MODEL_BASE_PATH,
           model_name=self._model_name,

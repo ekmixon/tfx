@@ -112,8 +112,8 @@ class Compiler:
           data_types_utils.set_metadata_value(value_field, property_value)
         except ValueError:
           raise ValueError(
-              "Component {} got unsupported parameter {} with type {}.".format(
-                  tfx_node.id, property_name, type(property_value)))
+              f"Component {tfx_node.id} got unsupported parameter {property_name} with type {type(property_value)}."
+          )
 
       for property_name, property_value in (
           value.additional_custom_properties.items()):
@@ -123,8 +123,8 @@ class Compiler:
           data_types_utils.set_metadata_value(value_field, property_value)
         except ValueError:
           raise ValueError(
-              "Component {} got unsupported parameter {} with type {}.".format(
-                  tfx_node.id, property_name, type(property_value)))
+              f"Component {tfx_node.id} got unsupported parameter {property_name} with type {type(property_value)}."
+          )
 
   def _compile_node(
       self,

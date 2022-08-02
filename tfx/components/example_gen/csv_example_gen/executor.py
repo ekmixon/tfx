@@ -82,14 +82,13 @@ class _ParsedCsvToTfExample(beam.DoFn):
       return
 
     if len(csv_cells) != len(self._column_handlers):
-      raise ValueError('Invalid CSV line: {}'.format(csv_cells))
+      raise ValueError(f'Invalid CSV line: {csv_cells}')
 
-    feature = {}
-    for csv_cell, (column_name, handler_fn) in zip(csv_cells,
-                                                   self._column_handlers):
-      feature[column_name] = (
-          handler_fn(csv_cell) if handler_fn else tf.train.Feature())
-
+    feature = {
+        column_name: (handler_fn(csv_cell) if handler_fn else tf.train.Feature())
+        for csv_cell, (column_name,
+                       handler_fn) in zip(csv_cells, self._column_handlers)
+    }
     yield tf.train.Example(features=tf.train.Features(feature=feature))
 
 
@@ -146,8 +145,7 @@ class _ReadCsvRecordsFromTextFile(beam.DoFn):
         if buffer.is_complete_line():
           yield buffer.read()
       if not buffer.is_empty():
-        raise ValueError(
-            'Csv record had unbalanced quotes. File: {}'.format(csv_filepath))
+        raise ValueError(f'Csv record had unbalanced quotes. File: {csv_filepath}')
 
 
 # TODO(b/193864521): Consider allowing users to configure parsing parameters.
@@ -180,15 +178,14 @@ class _CsvToExample(beam.PTransform):
 
     csv_files = fileio.glob(self._csv_pattern)
     if not csv_files:
-      raise RuntimeError('Split pattern {} does not match any files.'.format(
-          self._csv_pattern))
+      raise RuntimeError(
+          f'Split pattern {self._csv_pattern} does not match any files.')
 
     column_names = io_utils.load_csv_column_names(csv_files[0])
     for csv_file in csv_files[1:]:
       if io_utils.load_csv_column_names(csv_file) != column_names:
         raise RuntimeError(
-            'Files in same split {} have different header.'.format(
-                self._csv_pattern))
+            f'Files in same split {self._csv_pattern} have different header.')
 
     # Read each CSV file while maintaining order. This is done in order to group
     # together multi-line string fields.
